@@ -17,4 +17,7 @@ CHIP Mux4Way16 {
 
     PARTS:
     // Put your code here:
+    Mux16(a=a, b=b, sel=sel[0], out=a0b1);
+    Mux16(a=c, b=d, sel=sel[0], out=c0d1);
+    Mux16(a=a0b1, b=c0d1, sel=sel[1], out=out);
 }
