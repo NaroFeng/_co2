@@ -389,6 +389,7 @@ const CHAPTERS = {
     Or(a=c2, b=c1, out=carry);
 }` },
       { name: "Add16", summary: "串接 16 個 FullAdder 形成漣波進位加法器，最高位溢位忽略。",
+        img: "02/Add16.png",
         code:
 `CHIP Add16 {
     IN a[16], b[16];
@@ -408,7 +409,7 @@ const CHAPTERS = {
     Add16(a=in, b[0]=true, b[1..15]=false, out=out);
 }` },
       { name: "ALU", summary: "HACK CPU 的算術邏輯單元，依 zx/nx/zy/ny/f/no 6 個控制訊號產生 18 種運算；zr=輸出為 0、ng=最高位元為 1。",
-        img: ["02/螢幕截圖 2021-10-07 上午9.51.16.png"],
+        img: "02/ALU.png",
         code:
 `CHIP ALU {
     IN x[16], y[16],
@@ -425,8 +426,12 @@ const CHAPTERS = {
     Not16(in=y1, out=noty1);
     Mux16(a=y1, b=noty1, sel=ny, out=y2);
 
-    /* f, no, zr, ng 接續於課本指定流程 */
-    /* (Add16 / And16 / Not16 / Or16Ways ... etc.) */
+    /* f：x+y 或 x&y；no：再選擇是否反相 */
+    Add16(a=x2, b=y2, out=xaddy);
+    And16(a=x2, b=y2, out=xandy);
+    Mux16(a=xandy, b=xaddy, sel=f, out=fout);
+    Not16(in=fout, out=fnot);
+    Mux16(a=fout, b=fnot, sel=no, out=out);
 }` },
     ],
   },
