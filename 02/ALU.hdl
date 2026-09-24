@@ -50,9 +50,14 @@ CHIP ALU {
 
    Mux16(a=y, b=false, sel=zy, out=y1);
    Not16(in=y1, out=noty1);
-   Mux16(a=y1, b=noty1, sel=ny, out=y2);
+   Mux16(a=y1, b=noty1, sel=ny, out=y2);   
 
-   
+   Add16(a=x2, b=y2, out=xaddy);
+   And16(a=x2, b=y2, out=xandy);
+
+   Mux16(a=xandy, b=xaddy, sel=f, out=fout);
+   Not16(in=fout, out=fnot);
+   Mux16(a=fout, b=fnot, sel=no, out=out);
 
 
 
