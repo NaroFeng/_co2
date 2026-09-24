@@ -7,3 +7,7 @@
 學校 | [金門大學資訊工程系](https://www.nqu.edu.tw/educsie/index.php)
 學生 | 馮至豪
 學號 | 111410545
+
+## 作業展示網頁
+
+👉 [https://narofeng.github.io/_co2/](https://narofeng.github.io/_co2/)
