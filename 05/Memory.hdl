@@ -27,5 +27,15 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    // 1. 根據 address[13..14] 將 load 訊號派發到對應硬體 (Keyboard 唯讀不用派)
+    DMux4Way(in=load, sel=address[13..14], a=loadRAM1, b=loadRAM2, c=loadScreen, d=dummy);
+    Or(a=loadRAM1, b=loadRAM2, out=loadRAM);
+
+    // 2. 三個儲存元件實例化
+    RAM16K(in=in, load=loadRAM, address=address[0..13], out=outRAM);
+    Screen(in=in, load=loadScreen, address=address[0..12], out=outScreen);
+    Keyboard(out=outKBD);
+
+    // 3. 根據 address[13..14] 選擇對應的輸出
+    Mux4Way16(a=outRAM, b=outRAM, c=outScreen, d=outKBD, sel=address[13..14], out=out);
 }
