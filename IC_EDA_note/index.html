@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IC EDA 核心架構與自動佈局演算法動態分析平台</title>
+
+<!-- ===== 外部資源（Tailwind CSS CDN / Lucide Icons） ===== -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<style>
+  :root{
+    --c-cyan:#22d3ee; --c-violet:#a78bfa; --c-amber:#fbbf24;
+    --c-lime:#a3e635;  --c-rose:#fb7185;  --c-sky:#38bdf8;
+    --bg-0:#05080f; --bg-1:#0b1220;
+  }
+  html{scroll-behavior:smooth;}
+  body{
+    background:
+      radial-gradient(ellipse 80% 50% at 10% -10%, rgba(34,211,238,.13), transparent 60%),
+      radial-gradient(ellipse 70% 45% at 95% 5%, rgba(167,139,250,.12), transparent 60%),
+      var(--bg-0);
+    color:#cbd5e1;
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",
+                ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  /* 暗色工程儀表板卡片 */
+  .card{
+    background:linear-gradient(160deg,rgba(15,23,42,.92),rgba(2,6,23,.92));
+    border:1px solid rgba(51,65,85,.75);
+    border-radius:14px;
+    box-shadow:0 18px 40px -28px rgba(0,0,0,.9);
+    transition:border-color .25s, box-shadow .25s, transform .25s;
+  }
+  .card-hover:hover{
+    border-color:rgba(34,211,238,.45);
+    box-shadow:0 0 0 1px rgba(34,211,238,.10), 0 22px 48px -26px rgba(34,211,238,.55);
+    transform:translateY(-2px);
+  }
+  .hairline{border-color:rgba(51,65,85,.7);}
+  /* 霓虹標題 */
+  .neon-cyan{color:var(--c-cyan); text-shadow:0 0 18px rgba(34,211,238,.45);}
+  .neon-violet{color:var(--c-violet); text-shadow:0 0 18px rgba(167,139,250,.40);}
+  .neon-amber{color:var(--c-amber); text-shadow:0 0 18px rgba(251,191,36,.40);}
+  .neon-lime{color:var(--c-lime); text-shadow:0 0 18px rgba(163,230,53,.35);}
+  .neon-rose{color:var(--c-rose); text-shadow:0 0 18px rgba(251,113,133,.35);}
+  /* LIVE 指示燈 */
+  .live-dot{
+    width:8px;height:8px;border-radius:999px;background:var(--c-lime);
+    box-shadow:0 0 10px var(--c-lime); animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+  /* 程式碼/公式區塊 */
+  .codeblock{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    background:rgba(2,6,23,.85); border:1px solid rgba(51,65,85,.75);
+    border-radius:12px; letter-spacing:.2px;
+  }
+  /* 滑桿（自訂 neon） */
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;height:6px;border-radius:999px;
+    background:linear-gradient(90deg,rgba(34,211,238,.75),rgba(167,139,250,.55));
+    outline:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:999px;
+    background:#0b1220;border:2px solid var(--c-cyan);
+    box-shadow:0 0 10px rgba(34,211,238,.8);cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:999px;background:#0b1220;
+    border:2px solid var(--c-cyan);box-shadow:0 0 10px rgba(34,211,238,.8);cursor:pointer;
+  }
+  /* 模式切換按鈕 */
+  .mode-btn{
+    border:1px solid rgba(71,85,105,.8); background:rgba(15,23,42,.7);
+    transition:all .2s; cursor:pointer;
+  }
+  .mode-btn:hover{border-color:rgba(148,163,184,.7);}
+  .mode-btn.active{
+    border-color:rgba(34,211,238,.8);
+    background:linear-gradient(160deg,rgba(34,211,238,.16),rgba(167,139,250,.10));
+    box-shadow:0 0 0 1px rgba(34,211,238,.18),0 10px 26px -18px rgba(34,211,238,.9);
+  }
+  /* 勾選框 */
+  .chk{accent-color:var(--c-cyan);width:15px;height:15px;cursor:pointer;}
+  /* 表格 */
+  table.grid-tbl th{font-weight:600;color:#94a3b8;text-align:left;}
+  table.grid-tbl td,table.grid-tbl th{border-bottom:1px dashed rgba(71,85,105,.45);padding:.5rem .6rem;vertical-align:top;}
+  table.grid-tbl tr:hover td{background:rgba(34,211,238,.045);}
+  /* 捲軸 */
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:#05080f}
+  ::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px;border:2px solid #05080f}
+  ::-webkit-scrollbar-thumb:hover{background:#334155}
+  /* 階段卡選取態 */
+  .stage-card.selected{border-color:rgba(34,211,238,.75);box-shadow:0 0 0 1px rgba(34,211,238,.14),0 18px 40px -26px rgba(34,211,238,.8);}
+  .stage-card.selected .stage-no{background:rgba(34,211,238,.16);color:#67e8f9;border-color:rgba(34,211,238,.6);}
+  .fade-in{animation:fade .45s ease both}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  #chipCanvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
+    background:#05080f;touch-action:none;cursor:crosshair}
+  .metric-val{font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .tag{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid rgba(100,116,139,.55);color:#94a3b8}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ======================= 頂部 HERO ======================= -->
+<header class="relative overflow-hidden border-b border-slate-800/80">
+  <div class="mx-auto max-w-[1600px] px-5 py-9">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <span class="inline-flex items-center gap-2 text-[11px] tracking-[.18em] text-lime-300/90 border border-lime-400/30 bg-lime-400/5 rounded-full px-3 py-1">
+        <span class="live-dot"></span> SIMULATION ENGINE ONLINE
+      </span>
+      <span class="tag">RTL → GDSII Pipeline</span>
+      <span class="tag">Hypergraph · HPWL · RUDY · Poisson Field</span>
+      <span class="tag">Canvas 60fps</span>
+    </div>
+
+    <div class="flex flex-wrap items-end justify-between gap-6">
+      <div class="max-w-3xl">
+        <h1 class="text-3xl md:text-[42px] font-bold leading-tight text-slate-50">
+          IC EDA 核心架構與<br class="md:hidden"/>
+          <span class="neon-cyan">自動佈局演算法</span>動態分析平台
+        </h1>
+        <p class="mt-4 text-slate-400 text-[15px] leading-7">
+          本平台把「IC EDA 全流程知識地圖」與「三大佈局演算法動態沙盒」放在同一頁。
+          上半部是 <b class="text-slate-200">RTL-to-GDSII 四大階段</b> 的數學抽象與演算法對照；
+          下半部則是可以真正跑起來的 <b class="text-slate-200">Canvas 晶片模擬器</b>：
+          所有 HPWL、2D 密度投射、RUDY 走線擁塞與 Poisson 電場都是真實計算，
+          而不是預錄的假動畫。
+        </p>
+      </div>
+
+      <nav class="flex flex-wrap gap-2 text-sm">
+        <a href="#pipeline" class="px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/60 hover:border-cyan-400/60 hover:text-cyan-300 transition">① 流程地圖</a>
+        <a href="#objective" class="px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/60 hover:border-cyan-400/60 hover:text-cyan-300 transition">② 目標函數</a>
+        <a href="#anchors" class="px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/60 hover:border-cyan-400/60 hover:text-cyan-300 transition">③ 實戰錨點</a>
+        <a href="#sandbox" class="px-3 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 hover:bg-cyan-400/20 text-cyan-300 transition">④ 演算法沙盒 ▸</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-[1600px] px-5 py-10 space-y-12">
+
+<!-- ======================= 區塊一 ======================= -->
+<section id="architecture" class="space-y-8">
+
+  <!-- 1-1 流水線互動圖 -->
+  <div id="pipeline" class="scroll-mt-24">
+    <div class="flex items-center gap-3 mb-5">
+      <i data-lucide="waypoints" class="w-6 h-6 text-cyan-400"></i>
+      <h2 class="text-2xl font-bold text-slate-100">區塊一｜IC EDA 整體框架：RTL-to-GDSII 核心流水線</h2>
+    </div>
+    <p class="text-slate-400 mb-5 max-w-4xl">
+      點擊任一階段卡片，下方會即時切換該階段的
+      <span class="text-cyan-300">底層數學抽象模型</span>、
+      <span class="text-violet-300">主流核心演算法</span> 與
+      <span class="text-amber-300">與軟體編譯器 (Compiler) 的對應關係</span>。
+    </p>
+
+    <div class="flex flex-col lg:flex-row items-stretch gap-3" id="stageRow"><!-- JS 產生 --></div>
+
+    <!-- 階段詳情面板 -->
+    <div id="stageDetail" class="card p-5 md:p-6 mt-4"><!-- JS 產生 --></div>
+  </div>
+
+  <!-- 1-2 目標函數 -->
+  <div id="objective" class="scroll-mt-24">
+    <div class="flex items-center gap-3 mb-5">
+      <i data-lucide="target" class="w-6 h-6 text-violet-400"></i>
+      <h2 class="text-2xl font-bold text-slate-100">區塊一-2｜大局觀：佈局階段的「聯合最佳化目標函數」拆解</h2>
+    </div>
+
+    <div class="grid lg:grid-cols-5 gap-4">
+      <div class="lg:col-span-3 card p-5 md:p-6">
+        <div class="codeblock p-5 text-[13px] md:text-[15px] leading-8 overflow-x-auto">
+          <div class="text-slate-500 text-[11px] tracking-widest mb-2">OBJECTIVE FUNCTION · 佈局階段聯合最佳化</div>
+          <div class="font-semibold text-slate-100">
+            Total Cost&nbsp;=&nbsp;
+            <span class="neon-cyan">α · Wirelength(HPWL)</span>
+            <span class="text-slate-600"> + </span>
+            <span class="neon-violet">β · Overlap_Density</span>
+            <span class="text-slate-600"> + </span>
+            <span class="neon-amber">γ · Routing_Congestion_Margin</span>
+          </div>
+          <div class="mt-4 grid sm:grid-cols-3 gap-3 text-[12px] leading-6">
+            <div class="border-l-2 border-cyan-400/70 pl-3">
+              <div class="text-cyan-300 font-semibold">α：線長拉力</div>
+              <div class="text-slate-400">HPWL = Σ<sub>net</sub>[(max x − min x) + (max y − min y)]<br/>分段線性非凸函數，代表「要走的線有多長」。</div>
+            </div>
+            <div class="border-l-2 border-violet-400/70 pl-3">
+              <div class="text-violet-300 font-semibold">β：空間不重疊</div>
+              <div class="text-slate-400">2D Bin 投影密度 ρ(x,y) 超過 1 的溢出面積。<br/>代表「物理上塞不塞得下、還能不能合法化」。</div>
+            </div>
+            <div class="border-l-2 border-amber-400/70 pl-3">
+              <div class="text-amber-300 font-semibold">γ：走線容錯</div>
+              <div class="text-slate-400">以 RUDY 模型預估的走線需求密度。<br/>代表「後期還有沒有空間走線」。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-5 border border-rose-500/25 bg-rose-500/[.06] rounded-xl p-4 md:p-5">
+          <div class="flex items-start gap-3">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-400 mt-0.5 shrink-0"></i>
+            <div>
+              <h3 class="text-rose-300 font-semibold text-[15px] mb-1.5">為什麼 γ 必須「提前」到佈局階段？（華容道效應 Hua-Rong-Dao Effect）</h3>
+              <p class="text-slate-300 text-[13.5px] leading-7">
+                如果佈局只最小化 HPWL（γ = 0），演算法會得到一個「每一步看起來都很聰明」的局部解：
+                把邏輯密度的 cell 全部往中心擠，因為中心到所有 net 的平均距離最短。
+                結果是 <b class="text-slate-100">線長最短，但走線通道 100% 被塞死</b>。
+                真正的代價要到 CTS / Routing 階段才會爆發，那時才發現無路可走，
+                必須整體重排佈局 —— 而重排時又會遇到同樣的擁塞，
+                演算法於是被困在一個只能整體退火 (global annealing) 才能爬出的局部極小值裡。
+              </p>
+              <p class="text-slate-300 text-[13.5px] leading-7 mt-2">
+                這正是 <b class="text-amber-300">華容道</b> 的結構：前期每一步都「正確」，
+                整體卻無解。把 γ（Routing Congestion Margin）提前納入佈局目標，
+                等於在還能低成本調整幾何位置時，就先<b class="text-cyan-300">主動撐開高密度區域、預留走線走廊</b>，
+                避免後期陷入死胡同 —— 這就是「大局觀」的真正含義。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2 card p-5 md:p-6">
+        <h3 class="flex items-center gap-2 text-slate-100 font-semibold mb-4">
+          <i data-lucide="layers" class="w-5 h-5 text-cyan-400"></i> 三種策略在同一個 Cost 上的行為差異
+        </h3>
+        <table class="grid-tbl w-full text-[12.5px] leading-6">
+          <thead><tr><th>策略</th><th>HPWL</th><th>Overlap</th><th>Routability</th><th>本質</th></tr></thead>
+          <tbody>
+            <tr><td class="text-cyan-300">Greedy（α only）</td><td class="text-lime-300">≈ 3,974<br><span class="text-[10px] text-slate-500">最短</span></td><td class="text-rose-300">100%</td><td class="text-rose-300">0%</td><td class="text-slate-400">短視</td></tr>
+            <tr><td class="text-violet-300">Simulated Annealing</td><td class="text-lime-300">≈ 11,000</td><td class="text-amber-300">≈ 1%</td><td class="text-amber-300">≈ 47%</td><td class="text-slate-400">離散跳躍式收斂</td></tr>
+            <tr><td class="text-amber-300">Analytical, γ=0</td><td class="text-amber-300">≈ 12,100</td><td class="text-lime-300">≈ 0%</td><td class="text-amber-300">≈ 54%</td><td class="text-slate-400">有 β 無 γ</td></tr>
+            <tr><td class="text-amber-300">Analytical, γ=1.5</td><td class="text-amber-300">≈ 14,200</td><td class="text-lime-300">≈ 0%</td><td class="text-lime-300">≈ 68%</td><td class="text-slate-400">全局平衡</td></tr>
+            <tr><td class="text-lime-300">＋ Legalization</td><td class="text-rose-300">≈ 18,100<br><span class="text-[10px] text-slate-500">最長</span></td><td class="text-lime-300">0%</td><td class="text-lime-300">≈ 85%</td><td class="text-slate-400">物理可實作</td></tr>
+          </tbody>
+        </table>
+        <div class="mt-4 text-[12px] leading-6 text-slate-400 border-t border-slate-800 pt-4">
+          <b class="text-slate-300">課堂重點：</b>這不是「誰的 HPWL 最低誰就贏」。
+          真實競賽指標是 <b class="text-cyan-300">Timing × Area × Power × Routability</b> 的加權總和；
+          佈局 (Placement) 只是整條 RTL→GDSII 流程中，<b>唯一還能低成本改變「物理可行性」的階段</b>。
+          <div class="mt-1.5 text-slate-500">上表為本頁沙盒的實測數據（同一組網表、同一組初始位置）。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1-3 三個實戰錨點 -->
+  <div id="anchors" class="scroll-mt-24">
+    <div class="flex items-center gap-3 mb-5">
+      <i data-lucide="compass" class="w-6 h-6 text-lime-400"></i>
+      <h2 class="text-2xl font-bold text-slate-100">區塊一-3｜極速切入 EDA 的三個實戰錨點</h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      <!-- anchor 1 -->
+      <div class="card card-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-8 h-8 rounded-lg bg-cyan-400/15 border border-cyan-400/40 text-cyan-300 flex items-center justify-center font-bold">1</span>
+          <h3 class="font-semibold text-slate-100">資料結構與檔案格式</h3>
+        </div>
+        <ul class="text-[13px] leading-7 text-slate-400 space-y-1.5">
+          <li><b class="text-cyan-300">Hypergraph (V, H)</b>：V = cell 節點集、H = net 超邊集。佈局問題的抽象骨架。</li>
+          <li><b class="text-cyan-300">Verilog / SystemVerilog</b>：RTL 描述語言（對應編譯器前端）。</li>
+          <li><b class="text-cyan-300">LEF</b>：抽象 (Abstract) 與宏單元的幾何/接腳定義。</li>
+          <li><b class="text-cyan-300">DEF</b>：Design Exchange Format，記錄元件位置 (COMPONENTS/PLACEMENT)、接腳與 NETS。</li>
+          <li><b class="text-cyan-300">GDSII</b>：最終送到晶圓廠的幾何資料庫。</li>
+          <li><b class="text-cyan-300">Liberty (.lib)</b>：標準細胞的時序/功耗模型庫。</li>
+        </ul>
+        <pre class="codeblock mt-3 p-3 text-[11px] leading-5 text-slate-400 overflow-x-auto"><span class="text-violet-300">COMPONENTS</span> 3 ;
+  - c1 INVX1 + PLACED ( 120.00 210.00 ) N ;
+  - c2 BUFX2 + PLACED ( 148.00 210.00 ) FO0 ;
+<span class="text-violet-300">NETS</span> 2 ;
+  - n1 ( c1 Z ) ( c2 A ) ;</pre>
+      </div>
+
+      <!-- anchor 2 -->
+      <div class="card card-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-8 h-8 rounded-lg bg-violet-400/15 border border-violet-400/40 text-violet-300 flex items-center justify-center font-bold">2</span>
+          <h3 class="font-semibold text-slate-100">評估指標 (Metrics)</h3>
+        </div>
+        <ul class="text-[13px] leading-7 text-slate-400 space-y-1.5">
+          <li><b class="text-cyan-300">HPWL</b>：Total Half-Perimeter Wire Length，佈局最通用的線長指標。</li>
+          <li><b class="text-violet-300">2D Density Map</b>：Bin 網格上的面積密度，用來抓重疊與局部擁塞。</li>
+          <li><b class="text-amber-300">RUDY</b>：Routing Demand based on Bounding Box —— 以 net 的 bbox 預估走線需求密度。</li>
+          <li><b class="text-rose-300">Congestion Map / Overflow</b>：需求 > 供給的通道（真正的可繞線性）。</li>
+          <li><b class="text-lime-300">Timing (WNS/TNS)</b>：佈局後的關鍵路徑延遲與違例。</li>
+          <li><b class="text-sky-300">DRC/LVS Error Count</b>：簽核階段的最終裁判。</li>
+        </ul>
+        <div class="mt-3 codeblock p-3 text-[11px] leading-5 text-slate-400">
+          RUDY(G) = Σ<sub>nets</sub> [ pins(G) + L<sub>net</sub> · Area(G ∩ bbox<sub>net</sub>) / Area(bbox<sub>net</sub>) ]
+          <div class="text-slate-600 mt-1">// 長的 net 會把走線需求「攤平」到它跨越的所有 bin</div>
+          <div class="text-amber-300/90 mt-1">c(G) = RUDY(G) / ( K · mean(RUDY) · FreeArea(G) )</div>
+          <div class="text-slate-600">// FreeArea(G) = max(0.15, 1 − 0.8·ρ(G))：cell 佔走的面積 = 被封死的走線通道</div>
+        </div>
+      </div>
+
+      <!-- anchor 3 -->
+      <div class="card card-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-8 h-8 rounded-lg bg-amber-400/15 border border-amber-400/40 text-amber-300 flex items-center justify-center font-bold">3</span>
+          <h3 class="font-semibold text-slate-100">現代主流演進</h3>
+        </div>
+        <ul class="text-[13px] leading-7 text-slate-400 space-y-1.5">
+          <li><b class="text-slate-200">Simulated Annealing</b>（1980s–1990s）：離散交換 + Metropolis，早期 EDA 工業標準。</li>
+          <li><b class="text-violet-300">Analytical / Force-Directed</b>：ePlace (SIGDAC'12) 用 Poisson 電場做密度排斥。</li>
+          <li><b class="text-violet-300">RePlAce / SimPlace</b> (ICCAD'17/'19)：Nesterov 加速、連續到離散的混合流程。</li>
+          <li><b class="text-cyan-300">DREAMPlace</b> (ICCAD'19)：把佈局當成可微分 ML 最佳化，GPU 大規模並行。</li>
+          <li><b class="text-amber-300">2020s</b>：Chiplet / 3D-IC 異質整合、ML-based 拓樸與繞線、RL 代理模型。</li>
+        </ul>
+        <div class="mt-3 text-[12px] leading-6 text-slate-500 border-t border-slate-800 pt-3">
+          趨勢一句話：<b class="text-slate-300">從「離散隨機搜尋」→ 到「連續物理模型 + 硬體加速」→ 到「可微分 / 機器學習化」。</b>
+          下面沙盒的 A / B / C 三種模式，正對應這三個世代。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 區塊二：沙盒 ======================= -->
+<section id="sandbox" class="scroll-mt-20 space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <i data-lucide="cpu" class="w-6 h-6 text-amber-400"></i>
+      <h2 class="text-2xl font-bold text-slate-100">區塊二｜三大佈局演算法動態對比沙盒</h2>
+    </div>
+    <div class="text-[12px] text-slate-500 flex items-center gap-2">
+      <i data-lucide="mouse-pointer-click" class="w-4 h-4"></i> 可直接用滑鼠拖曳晶片上的元件
+    </div>
+  </div>
+
+  <div class="grid xl:grid-cols-[320px_minmax(0,1fr)_330px] gap-4 items-start">
+
+    <!-- ============ 左：控制面板 ============ -->
+    <div class="space-y-4">
+      <!-- 模式切換 -->
+      <div class="card p-4">
+        <h3 class="text-[12px] tracking-widest text-slate-500 mb-3">ALGORITHM MODE · 演算法模式</h3>
+        <div class="space-y-2">
+          <button class="mode-btn w-full text-left rounded-xl p-3 flex gap-3 items-start" data-mode="A">
+            <i data-lucide="trending-down" class="w-4 h-4 mt-1 text-cyan-400 shrink-0"></i>
+            <span>
+              <span class="block text-[13.5px] font-semibold text-slate-100">A · 貪婪局部最佳化</span>
+              <span class="block text-[11.5px] text-slate-400 leading-5">Greedy / Local Wirelength Only —— 只看眼前線長，cell 全往中心擠成一團。</span>
+            </span>
+          </button>
+          <button class="mode-btn active w-full text-left rounded-xl p-3 flex gap-3 items-start" data-mode="B">
+            <i data-lucide="activity" class="w-4 h-4 mt-1 text-violet-400 shrink-0"></i>
+            <span>
+              <span class="block text-[13.5px] font-semibold text-slate-100">B · 模擬退火</span>
+              <span class="block text-[11.5px] text-slate-500 leading-5">Simulated Annealing —— 隨機交換 + Metropolis 接受機率 exp(−ΔC/T)。</span>
+            </span>
+          </button>
+          <button class="mode-btn w-full text-left rounded-xl p-3 flex gap-3 items-start" data-mode="C">
+            <i data-lucide="orbit" class="w-4 h-4 mt-1 text-amber-400 shrink-0"></i>
+            <span>
+              <span class="block text-[13.5px] font-semibold text-slate-100">C · 解析法 + 擁塞預留</span>
+              <span class="block text-[11.5px] text-slate-500 leading-5">Analytical Force-Directed + Congestion Margin —— 彈簧 / 斥力 / 預留氣場三力平衡。</span>
+            </span>
+          </button>
+        </div>
+        <div id="modeNote" class="mt-3 text-[11.5px] leading-6 text-slate-400 border-t border-slate-800 pt-3"></div>
+      </div>
+
+      <!-- 權重滑桿 -->
+      <div class="card p-4">
+        <h3 class="text-[12px] tracking-widest text-slate-500 mb-3">COST WEIGHTS · 目標函數權重</h3>
+
+        <div class="mb-3">
+          <div class="flex justify-between items-baseline mb-1">
+            <label class="text-[12.5px] text-cyan-300 font-medium">α · 線長拉力權重</label>
+            <span id="vAlpha" class="metric-val text-[12.5px] text-cyan-300">1.00</span>
+          </div>
+          <input id="sAlpha" type="range" min="0" max="2.5" step="0.05" value="1" class="w-full">
+          <div class="text-[11px] text-slate-500 mt-1">Wirelength Weight —— 拉近 net 的各 pin</div>
+        </div>
+
+        <div class="mb-3">
+          <div class="flex justify-between items-baseline mb-1">
+            <label class="text-[12.5px] text-violet-300 font-medium">β · 空間不重疊權重</label>
+            <span id="vBeta" class="metric-val text-[12.5px] text-violet-300">1.00</span>
+          </div>
+          <input id="sBeta" type="range" min="0" max="2.5" step="0.05" value="1" class="w-full">
+          <div class="text-[11px] text-slate-500 mt-1">Density Weight —— 網格靜電斥力，消除重疊</div>
+        </div>
+
+        <div class="mb-2">
+          <div class="flex justify-between items-baseline mb-1">
+            <label class="text-[12.5px] text-amber-300 font-medium">γ · 大局走線容錯權重</label>
+            <span id="vGamma" class="metric-val text-[12.5px] text-amber-300">0.80</span>
+          </div>
+          <input id="sGamma" type="range" min="0" max="2.5" step="0.05" value="0.8" class="w-full">
+          <div class="text-[11px] text-slate-500 mt-1">Routing Margin / Pre-inflation —— 依 RUDY 主動撐開高密度區</div>
+        </div>
+
+        <div class="mt-3 p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] leading-5 text-slate-500">
+          把 <b class="text-amber-300">γ 拉到 0</b> 再對比：走線容錯分數會明顯崩盤，
+          因為沒有人主動替後期「留走廊」。
+        </div>
+      </div>
+
+      <!-- 圖層開關 -->
+      <div class="card p-4">
+        <h3 class="text-[12px] tracking-widest text-slate-500 mb-3">VISUALIZATION LAYERS · 圖層開關</h3>
+        <label class="flex items-center gap-2.5 py-1.5 text-[12.5px] text-slate-300 cursor-pointer">
+          <input id="cWires" type="checkbox" class="chk" checked> 邏輯飛線 (Ratsnest / Steiner Approx.)
+        </label>
+        <label class="flex items-center gap-2.5 py-1.5 text-[12.5px] text-slate-300 cursor-pointer">
+          <input id="cHeat" type="checkbox" class="chk" checked> 網格走線擁塞熱力圖 (RUDY)
+        </label>
+        <label class="flex items-center gap-2.5 py-1.5 text-[12.5px] text-slate-300 cursor-pointer">
+          <input id="cHalo" type="checkbox" class="chk" checked> 大局預留空間氣場 (Margin Halo)
+        </label>
+        <label class="flex items-center gap-2.5 py-1.5 text-[12.5px] text-slate-300 cursor-pointer">
+          <input id="cGrid" type="checkbox" class="chk" checked> 10×10 Grid Bins
+        </label>
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div class="card p-4">
+        <h3 class="text-[12px] tracking-widest text-slate-500 mb-3">CONTROL · 操作</h3>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnRun" class="col-span-2 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-semibold bg-cyan-500/15 border border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/25 transition">
+            <i data-lucide="play" class="w-4 h-4"></i><span id="btnRunText">開始演化</span>
+          </button>
+          <button id="btnStep" class="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] bg-slate-800/70 border border-slate-700 text-slate-300 hover:border-cyan-400/50 hover:text-cyan-300 transition">
+            <i data-lucide="step-forward" class="w-4 h-4"></i>單步
+          </button>
+          <button id="btnLegal" class="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] bg-slate-800/70 border border-slate-700 text-slate-300 hover:border-amber-400/50 hover:text-amber-300 transition">
+            <i data-lucide="align-center" class="w-4 h-4"></i>合法化
+          </button>
+          <button id="btnReset" class="col-span-2 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] bg-slate-800/70 border border-slate-700 text-slate-300 hover:border-rose-400/50 hover:text-rose-300 transition">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>隨機重置網表 (Reset)
+          </button>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-500 leading-5">快捷鍵：<b class="text-slate-400">空白鍵</b> = 開始/暫停</div>
+      </div>
+    </div>
+
+    <!-- ============ 中：Canvas 晶片 ============ -->
+    <div class="space-y-3">
+      <div class="card p-3 md:p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2 text-[12px] text-slate-400">
+            <span id="hudMode" class="px-2 py-1 rounded-md border border-violet-400/40 bg-violet-400/10 text-violet-300 font-medium">MODE B · SIMULATED ANNEALING</span>
+            <span id="hudIter" class="metric-val">ITER 0</span>
+            <span id="hudTemp" class="metric-val">T = —</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm" style="background:#22c55e"></span>低</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm" style="background:#eab308"></span>中</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm" style="background:#ef4444"></span>高 (RUDY)</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full" style="background:rgba(251,191,36,.45);box-shadow:0 0 8px rgba(251,191,36,.8)"></span>預留氣場</span>
+          </div>
+        </div>
+
+        <canvas id="chipCanvas" width="760" height="760"></canvas>
+
+        <!-- 溫度冷卻進度條 -->
+        <div id="tempWrap" class="mt-3 flex items-center gap-3">
+          <span class="text-[11px] text-slate-500 whitespace-nowrap">TEMPERATURE COOLING</span>
+          <div class="flex-1 h-2 rounded-full bg-slate-800/80 overflow-hidden border border-slate-700/60">
+            <div id="tempBar" class="h-full w-0 bg-gradient-to-r from-rose-500 via-amber-400 to-cyan-400 transition-[width] duration-150"></div>
+          </div>
+          <span id="tempPct" class="text-[11px] text-slate-400 metric-val whitespace-nowrap">0%</span>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-3 text-[12px] leading-6 text-slate-400">
+        <div class="card p-4">
+          <b class="text-cyan-300 text-[12.5px]">目前模式在做什麼？</b>
+          <div id="explainBox" class="mt-1.5"></div>
+        </div>
+        <div class="card p-4">
+          <b class="text-violet-300 text-[12.5px]">可切換的實驗</b>
+          <ul class="mt-1.5 space-y-1 list-disc pl-4">
+            <li><b class="text-cyan-300">模式 A vs 模式 C</b>：同樣只看線長，誰的 Routability 較高？（0% vs 64%）</li>
+            <li>模式 C 將 <b class="text-amber-300">γ = 0 → 1.5</b>，觀察預留氣場把元件撐開、熱力圖由黃轉綠。</li>
+            <li>模式 B 觀察溫度冷卻後，交換頻率驟降、畫面呈「跳躍式」收斂。</li>
+            <li>跑完按 <b class="text-amber-300">合法化</b>：元件整齊對齊標準列 → Overlap 歸零、Routability 升到 ~85%<br>
+              <span class="text-slate-500">（但 HPWL 會變長 —— 這就是真實 EDA 中 legalization 與 routability 的 trade-off）</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 右：儀表板 ============ -->
+    <div class="space-y-4">
+      <!-- 指標卡 -->
+      <div class="card p-4">
+        <h3 class="text-[12px] tracking-widest text-slate-500 mb-3">REAL-TIME METRICS · 即時指標</h3>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="rounded-lg bg-slate-950/70 border border-slate-800 p-3">
+            <div class="text-[10.5px] text-slate-500 mb-1">ITERATION</div>
+            <div id="mIter" class="metric-val text-xl text-slate-100">0</div>
+          </div>
+          <div class="rounded-lg bg-slate-950/70 border border-slate-800 p-3">
+            <div class="text-[10.5px] text-slate-500 mb-1">TOTAL HPWL</div>
+            <div id="mHpwl" class="metric-val text-xl neon-cyan">0</div>
+            <div class="text-[10px] text-slate-600">px（半周長線長）</div>
+          </div>
+          <div class="rounded-lg bg-slate-950/70 border border-slate-800 p-3">
+            <div class="text-[10.5px] text-slate-500 mb-1">OVERLAP</div>
+            <div id="mOverlap" class="metric-val text-xl neon-rose">0%</div>
+            <div class="text-[10px] text-slate-600">元件重疊率</div>
+          </div>
+          <div class="rounded-lg bg-slate-950/70 border border-slate-800 p-3">
+            <div class="text-[10.5px] text-slate-500 mb-1">ROUTABILITY</div>
+            <div id="mRoute" class="metric-val text-xl neon-lime">0%</div>
+            <div class="text-[10px] text-slate-600">預估布線成功率</div>
+          </div>
+        </div>
+        <div class="mt-2.5 grid grid-cols-2 gap-2.5">
+          <div class="rounded-lg bg-slate-950/70 border border-slate-800 p-3">
+            <div class="text-[10.5px] text-slate-500 mb-1">MAX CONGESTION (c)</div>
+            <div id="mCong" class="metric-val text-base text-amber-300">0.00</div>
+          </div>
+          <div class="rounded-lg bg-slate-950/70 border border-slate-800 p-3">
+            <div class="text-[10.5px] text-slate-500 mb-1">TOTAL COST</div>
+            <div id="mCost" class="metric-val text-base text-slate-200">0.00</div>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div class="flex justify-between text-[11px] mb-1"><span class="text-slate-500">Routability Score</span><span id="routeBarTxt" class="metric-val text-slate-400">0%</span></div>
+          <div class="h-2 rounded-full bg-slate-800/80 border border-slate-700/60 overflow-hidden">
+            <div id="routeBar" class="h-full w-0 bg-gradient-to-r from-rose-500 via-amber-400 to-lime-400 transition-[width] duration-200"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 折線圖 -->
+      <div class="card p-4">
+        <h3 class="text-[12px] tracking-widest text-slate-500 mb-2">CONVERGENCE · 收斂曲線</h3>
+        <canvas id="metricChart" class="w-full" style="height:150px"></canvas>
+        <div class="flex gap-4 mt-2 text-[11px] text-slate-500">
+          <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-cyan-400 inline-block"></span>HPWL（正規化）</span>
+          <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-lime-400 inline-block"></span>Routability %</span>
+        </div>
+      </div>
+
+      <!-- 數值對照 -->
+      <div class="card p-4 text-[11.5px] leading-6 text-slate-400">
+        <b class="text-slate-200 text-[12.5px]">公式速查</b>
+        <div class="codeblock mt-2 p-3 text-[11px] leading-6">
+          <div><span class="text-cyan-300">HPWL</span> = Σ_net [(xmax−xmin) + (ymax−ymin)]</div>
+          <div><span class="text-violet-300">ρ(bin)</span> = Σ_cell Area(cell ∩ bin) / Area(bin)</div>
+          <div><span class="text-amber-300">RUDY(G)</span> = Σ_net [pins(G) + L_net·A(G∩bbox)/A(bbox)]</div>
+          <div><span class="text-rose-300">c(G)</span> = RUDY(G) / mean(RUDY)</div>
+          <div><span class="text-lime-300">Score</span> = 100·e^(−2.4·OVF − 0.25·max(0,c<sub>max</sub>−1.5))·(1−0.8·Overlap)</div>
+          <div><span class="text-slate-500">OVF</span> = mean_G max(0, c(G) − 1)　← 平均通道超載率</div>
+          <div><span class="text-slate-500">Overlap</span> = 成對重疊面積 / 元件總面積</div>
+        </div>
+        <div class="mt-2 text-slate-500 leading-5">
+          節點：<b class="text-slate-400">35 個標準邏輯元件（面積不一）</b>、
+          <b class="text-slate-400">55 條 hyperedge</b>、<b class="text-slate-400">16 個固定 I/O Pads</b>、
+          網格 <b class="text-slate-400">10 × 10 Grid Bins</b>。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t border-slate-800/70 mt-12">
+  <div class="mx-auto max-w-[1600px] px-5 py-7 text-[12px] text-slate-500 leading-6 flex flex-wrap gap-x-8 gap-y-2">
+    <span>參考文獻：Spindler et al., <i class="text-slate-400">Fast and Accurate RUDY</i> (DATE'09)</span>
+    <span>Jiang et al., <i class="text-slate-400">ePlace: Fast and Robust Analytical Placement</i> (SIGDAC'12)</span>
+    <span>Jiang et al., <i class="text-slate-400">RePlAce</i> (ICCAD'17)</span>
+    <span>Gu et al., <i class="text-slate-400">DREAMPlace</i> (ICCAD'19)</span>
+    <span class="text-slate-600">Single-File HTML · Tailwind CDN · Lucide Icons · Native Canvas</span>
+  </div>
+</footer>
+</main>
+
+<script>
+/* ===== 全域小工具：安全的 Lucide 圖示渲染（CDN 失效時不讓整頁中斷） ===== */
+window.__icons=function(){
+  try{ if(window.lucide && window.lucide.createIcons) window.lucide.createIcons(); }catch(e){}
+};
+
+/* ============================================================================
+ *  區塊一：IC EDA 流程地圖（RTL-to-GDSII 四階段卡片 + 動態詳情面板）
+ * ==========================================================================*/
+(function(){
+  'use strict';
+  const $=(s)=>document.querySelector(s);
+
+  const STAGES=[
+    {
+      no:'01', icon:'cpu', accent:'cyan',
+      title:'邏輯綜合', en:'Logic Synthesis',
+      tagline:'RTL → 門級網表 (Gate-Level Netlist)',
+      desc:'把高階行為描述轉成可實作的硬體結構。此階段決定「邏輯深度」與「標準細胞數量」，是整條流程的資源起點。',
+      io:['Verilog / SystemVerilog RTL','合成後網表 (Netlist)','SDC 設計約束'],
+      math:[
+        ['布代數與布林函數最小化','行為描述等價於 Boolean 函數 F(x₁…xₙ)；邏輯最小化 = NP-hard 的布林覆蓋問題（Quine–McCluskey / ESPRESSO）。'],
+        ['AIG / OBDD 圖形表示','把條件指派改寫成 And-Inverter Graph（Directed Acyclic Graph）：節點數 ≈ 面積、圖深度 ≈ 延遲。'],
+        ['Technology Mapping','將 Boolean 網路映射到 Standard Cell Library，最小化 Σ(area·w_area) + Σ(delay·w_delay)。']
+      ],
+      algo:[
+        ['ABC / AIG Rewriting','結構化重寫 (strashing)、resynthesis、don\'t-care 最佳化。'],
+        ['邏輯優化與資源共享','Multi-constant propagation、resource sharing、面積–延遲 Pareto 取捨。'],
+        ['商業工具','Synplify Pro、Design Compiler、Genus。']
+      ],
+      cmp:[
+        ['AST / IR 建構 ↔ 條件指派改寫','把高階語意正規化成正規形 (Normal Form)。'],
+        ['SSA + CSE ↔ AIG 重寫','共用子運算式消除、恆定傳遞 (Constant Propagation)。'],
+        ['Instruction Selection ↔ Technology Mapping','從抽象運算挑選具體閘級 (gate-level) 實作。']
+      ],
+      fail:'只顧面積不顧延遲 → 關鍵路徑過長；或邏輯過度簡化 → 後期佈局/繞線完全沒有空間可用。'
+    },
+    {
+      no:'02', icon:'grid-3x3', accent:'violet',
+      title:'實體佈局', en:'Placement',
+      tagline:'把每個 cell 擺到晶片上（2D 座標 + 朝向）',
+      desc:'決定「大局空間配置」：cell 的位置、朝向與合法列對齊，直接決定後期的可繞線性（routability）。',
+      io:['Placed Netlist (DEF)','Cell Positions / Orientations','Timing & DRC-ready placement'],
+      math:[
+        ['HPWL 目標函數','HPWL = Σ_net [(max x − min x) + (max y − min y)]；分段線性、非凸 → 全域最佳化為 NP-hard。'],
+        ['超圖 (Hypergraph) 抽象','V = cell 節點集、H = net 超邊集；真實線長以 Steiner Tree / RSMT 抽象（HPWL 只是其下界）。'],
+        ['密度與電位模型','ρ(x,y) = 2D Bin 投影密度；Poisson 形式化 ∇²ψ = −ρ，電場 E = −∇ψ → ePlace 的解析核心。'],
+        ['聯合目標','min α·HPWL + β·Density Overflow + γ·Congestion Margin。']
+      ],
+      algo:[
+        ['Analytical Placement','ePlace (SIGDAC\'12)、RePlAce (ICCAD\'17)、SimPlace (ICCAD\'19)：連續座標 + Nesterov 加速。'],
+        ['GPU / ML 加速','DREAMPlace (ICCAD\'19)：把佈局視為可微分 ML 最佳化，用 GPU 求解大規模晶片。'],
+        ['拓樸與時序驅動','Topological Placement、Timing-driven Placement、混合單元 (Hybrid Unit) 拆解。']
+      ],
+      cmp:[
+        ['Basic Block Placement ↔ 程式碼配置','以超圖分割把 hot basic block 聚在一起。'],
+        ['Instruction Scheduling ↔ 路徑擺放','先擺關鍵路徑上的 cell，再排次要路徑。'],
+        ['Register Allocation ↔ Pin / Register 擺放','管腳數與暫存器位置對應資源共享。']
+      ],
+      fail:'貪婪最小化 HPWL → cell 擠成密集核心 → 走線通道 100% 被塞死 → 後期陷入「華容道」死局（本頁沙盒 Mode A 會親手演出來）。'
+    },
+    {
+      no:'03', icon:'route', accent:'amber',
+      title:'時鐘樹與繞線', en:'CTS & Routing',
+      tagline:'把抽象連線變成真實金屬導線',
+      desc:'建立零偏斜時脈樹 (Zero-Skew Clock Tree) 並在有限資源下完成繞線；此時才知道前期到底留不留下通道。',
+      io:['佈線後網表 (SPEF)','Layer / Track 指派','RC 與時序簽核資料'],
+      math:[
+        ['Steiner Tree 與零偏斜','時鐘樹 = TSN (Tree of Steiner Nodes)；Huffman / DME 建構 zero-delay tree，目標 min Σlength s.t. max delay = 0。'],
+        ['繞線 = 圖論最短路','Routing Graph + Track 資源 → Topological (global) → Detailed Routing；衝突本质是資源競爭。'],
+        ['擁塞數學','Demand vs Capacity；流體模型 (fluid model)、容量鬆弛 (capacity relaxation)。']
+      ],
+      algo:[
+        ['CTS','DME (Deferred Merge Embedding)、TDT、FLUTE、ML-based TopoOpt。'],
+        ['全域繞線','TopCon、NCTU-GR（ILP-based）、ML 導向 NCTU-GR2。'],
+        ['細部繞線','Negotiated Congestion / PathFinder、Maze Routing (A*)、多金屬層 2.5D/3D 繞線。']
+      ],
+      cmp:[
+        ['Instruction Scheduling ↔ CTS 平衡','關鍵路徑與時序餘裕同樣需要「全域平衡」。'],
+        ['Resource Sharing ↔ 走線資源共享','同一 Track 被多條 net 競爭 = 資源衝突。'],
+        ['Loop Unrolling ↔ Datapath 複製','複製硬體換 ILP，代價是佈局/繞線複雜度上升。']
+      ],
+      fail:'佈局階段沒留通道 → Routing Overflow；此時才回頭重排佈局，等於前面所有工作全部重做。'
+    },
+    {
+      no:'04', icon:'shield-check', accent:'rose',
+      title:'實體驗證', en:'Sign-off DRC / LVS',
+      tagline:'確認可以送去流片 (Tape-out Ready)',
+      desc:'以製程規則檢查幾何違例，並確認版圖與網表在拓樸上等價 —— 這是最後一道閘門，也是時程成本最高的一關。',
+      io:['DRC / LVS 報告','GDSII 資料庫','Sign-off 簽核報告'],
+      math:[
+        ['DRC = 幾何布林運算','Pattern matching + geometric boolean (union/subtract) + BSP / 掃描線加速。'],
+        ['LVS = 拓樸等價','元件 (device) 匹配 + 連線圖 (graph) 等價類，須處理對稱性 (symmetry)。'],
+        ['統計製程變異','SPEF / SDF corners 的 RC 與延遲分布、多模組多角落 (MMMC) 統計分析。']
+      ],
+      algo:[
+        ['簽核工具','Siemens Calibre、Cadence PVS / Pegasus / Tempus、Synopsys IC Validator。'],
+        ['向量式 (Vectorless) DRC','以幾何運算加速大規模比對；Mantle 晶圓圖層模型。'],
+        ['時序簽核 (STA)','MMMC 多角落分析、CPPR 佈線後 RC 抽取。']
+      ],
+      cmp:[
+        ['Type Checking / Dataflow Analysis ↔ DRC','同樣是「規則比對 + 錯誤回報」的靜態分析。'],
+        ['Linker / Symbol Resolution ↔ LVS','連結兩個模型並確認結構等價。'],
+        ['Static Analysis ↔ STA','靜態分析找出最壞情況下的時間餘裕。']
+      ],
+      fail:'DRC / LVS 失敗 → 回頭改動網表或版圖 → 前面所有階段重跑，時程成本最高。'
+    }
+  ];
+
+  const ACCENT={cyan:'#22d3ee',violet:'#a78bfa',amber:'#fbbf24',rose:'#fb7185'};
+
+  const row=$('#stageRow'), detail=$('#stageDetail');
+
+  /* --- 產生四張階段卡片 --- */
+  row.innerHTML=STAGES.map((s,i)=>`
+    <button class="stage-card card card-hover flex-1 text-left p-4 ${i===0?'selected':''}" data-i="${i}">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span class="stage-no font-mono text-[11px] px-2 py-0.5 rounded border border-slate-700 text-slate-400">${s.no}</span>
+        <i data-lucide="${s.icon}" class="w-4 h-4" style="color:${ACCENT[s.accent]}"></i>
+      </div>
+      <div class="text-slate-100 font-semibold text-[15px]">${s.title}</div>
+      <div class="font-mono text-[10.5px] text-slate-500 mt-0.5">${s.en}</div>
+      <div class="text-[12px] text-slate-400 mt-2 leading-5">${s.tagline}</div>
+      <div class="mt-3 h-0.5 rounded" style="background:linear-gradient(90deg,${ACCENT[s.accent]},transparent)"></div>
+    </button>
+    ${i<STAGES.length-1?'<div class="hidden lg:flex items-center text-slate-600/80"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>':''}
+  `).join('');
+
+  /* --- 產生階段詳情面板 --- */
+  function renderDetail(i){
+    const s=STAGES[i], col=ACCENT[s.accent];
+    const colBlock=(title,icon,items,color)=>`
+      <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="${icon}" class="w-4 h-4" style="color:${color}"></i>
+          <b class="text-[13px]" style="color:${color}">${title}</b>
+        </div>
+        <ul class="space-y-2.5">
+          ${items.map(it=>`
+            <li class="text-[12.5px] leading-6">
+              <span class="text-slate-200 font-medium">${it[0]}</span><br>
+              <span class="text-slate-400">${it[1]}</span>
+            </li>`).join('')}
+        </ul>
+      </div>`;
+
+    detail.innerHTML=`
+      <div class="fade-in">
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+          <span class="font-mono text-[11px] px-2 py-1 rounded border" style="border-color:${col}55;color:${col}">STAGE ${s.no}</span>
+          <h3 class="text-xl font-bold text-slate-100">${s.title}
+            <span class="font-mono text-[13px] font-normal text-slate-500 ml-1">${s.en}</span>
+          </h3>
+          <span class="text-[12px] text-slate-400">${s.tagline}</span>
+        </div>
+        <p class="text-[13px] leading-7 text-slate-300 mb-5">${s.desc}</p>
+
+        <div class="grid lg:grid-cols-3 gap-3">
+          ${colBlock('底層數學抽象模型','sigma',s.math,col)}
+          ${colBlock('主流核心演算法','cpu',s.algo,col)}
+          ${colBlock('與軟體編譯器的對應關係','git-branch',s.cmp,col)}
+        </div>
+
+        <div class="mt-4 grid md:grid-cols-2 gap-3">
+          <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+            <b class="text-[12.5px] text-slate-200">本階段輸出產物</b>
+            <div class="mt-2 flex flex-wrap gap-2">
+              ${s.io.map(x=>`<span class="tag">${x}</span>`).join('')}
+            </div>
+          </div>
+          <div class="rounded-xl border border-rose-500/25 bg-rose-500/[.05] p-4">
+            <b class="text-[12.5px] text-rose-300">常見失敗模式 (Failure Mode)</b>
+            <p class="text-[12.5px] leading-6 text-slate-300 mt-1.5">${s.fail}</p>
+          </div>
+        </div>
+      </div>`;
+    window.__icons();
+  }
+
+  row.addEventListener('click',e=>{
+    const btn=e.target.closest('.stage-card');
+    if(!btn) return;
+    row.querySelectorAll('.stage-card').forEach(b=>b.classList.toggle('selected',b===btn));
+    renderDetail(+btn.dataset.i);
+  });
+
+  renderDetail(0);
+  window.__icons();
+})();
+
+/* ============================================================================
+ *  IC EDA Sandbox — 核心引擎
+ *  ----------------------------------------------------------------------------
+ *  本腳本實作三套「真的會算」的佈局演算法：
+ *    Mode A : 貪婪局部最佳化（只看 HPWL，無斥力 → 擠成一團）
+ *    Mode B : 模擬退火 Simulated Annealing（隨機交換 + Metropolis 接受準則）
+ *    Mode C : 解析式 Force-Directed（彈簧拉力 + 網格靜電斥力 + 擁塞預留氣場）
+ *  所有指標（HPWL / 2D 密度 / RUDY 擁塞 / 重疊率 / Routability）皆即時計算。
+ * ==========================================================================*/
+(function(){
+  'use strict';
+
+  /* ------------------------------------------------------------------ *
+   * 0. 基本工具
+   * ------------------------------------------------------------------ */
+  const $  = (s)=>document.querySelector(s);
+  const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+  const lerp =(a,b,t)=>a+(b-a)*t;
+
+  /** 可重現的偽亂數（mulberry32），讓 Reset 可控 */
+  function mulberry32(a){
+    return function(){
+      a|=0; a=a+0x6D2B79F5|0;
+      let t=Math.imul(a^a>>>15,1|a);
+      t=t+Math.imul(t^t>>>7,61|t)^t;
+      return ((t^t>>>14)>>>0)/4294967296;
+    };
+  }
+  let RNG = mulberry32(20261029);
+  const randInt=(n)=>Math.floor(RNG()*n);
+
+  /** 矩形重疊面積 */
+  function overlapArea(a,b){
+    const w=Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0);
+    const h=Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0);
+    return (w>0&&h>0)?w*h:0;
+  }
+  /** 長度：Math.hypot 在 V8 上比 sqrt 慢很多，熱迴圈一律用這個 */
+  const len2=(dx,dy)=>Math.sqrt(dx*dx+dy*dy);
+
+  /* ------------------------------------------------------------------ *
+   * 1. 幾何常數：晶片畫布 / 核心區 / 10x10 Grid Bins
+   * ------------------------------------------------------------------ */
+  const LOGICAL = 760;                 // 邏輯畫布尺寸（會等比縮放到螢幕）
+  const GRID    = 10;                  // 10 x 10 Grid Bins
+  const CORE    = {x0:70,y0:70,x1:690,y1:690};   // 核心佈局區（可擺 cell 的範圍）
+  CORE.w = CORE.x1-CORE.x0; CORE.h = CORE.y1-CORE.y0;
+  const BIN      = CORE.w/GRID;       // 單一 bin 邊長 = 62px
+  const BIN_AREA = BIN*BIN;
+  const NB       = GRID*GRID;         // bin 總數 = 100
+  const ROW_H    = 22;                // 標準列 (Standard Cell Row) 高度
+  const RECT_BUF = [];                // 預配置矩形緩衝區（避免 hot loop 反覆配置物件）
+  for(let i=0;i<64;i++) RECT_BUF.push({x0:0,y0:0,x1:0,y1:0});
+
+  const binRect=(i,j)=>({x0:CORE.x0+i*BIN, y0:CORE.y0+j*BIN, x1:CORE.x0+(i+1)*BIN, y1:CORE.y0+(j+1)*BIN});
+  const binIndex=(x,y)=>{
+    const i=clamp(Math.floor((x-CORE.x0)/BIN),0,GRID-1);
+    const j=clamp(Math.floor((y-CORE.y0)/BIN),0,GRID-1);
+    return j*GRID+i;
+  };
+  const nodeRect=(n,x,y)=>({x0:(x??n.x)-n.w/2, y0:(y??n.y)-n.h/2, x1:(x??n.x)+n.w/2, y1:(y??n.y)+n.h/2});
+
+  /* ------------------------------------------------------------------ *
+   * 2. 全域狀態
+   * ------------------------------------------------------------------ */
+  let NODES=[], NETS=[], PADS=[];
+  let mode='B', running=false, iter=0;
+  let alpha=1.0, beta=1.0, gamma=0.8;
+  let showWires=true, showHeat=true, showHalo=true, showGrid=true;
+  let legalized=false;
+  let hoverNode=-1, dragNode=-1;
+
+  // 模擬退火參數
+  const T_START=300, T_END=0.5, TEMP_ITERS=3000;
+  let temperature=T_START;
+
+  // 指標快取
+  let M={hpwl:0,overlap:0,cong:0,ovf:0,route:0,cost:0,rho:null,congMap:null};
+  const HISTORY={hpwl:[],route:[],iter:[]};
+  // 幾何場快取（避免同一幀重複計算 RUDY / 密度 / 擁塞）
+  let CACHE=null;                            // {boxes,rudy,congMap,rho,dirty}
+
+  /* ------------------------------------------------------------------ *
+   * 3. 網表生成：35 個 cell（面積不一）+ 55 條 net + 16 個 I/O Pad
+   * ------------------------------------------------------------------ */
+  function sizeForArea(a){ return {w:18+a*0.085, h:11+a*0.048}; }
+
+  function buildNetlist(seed){
+    RNG=mulberry32(seed);
+    NODES=[]; NETS=[]; PADS=[];
+
+    /* --- 3.1 生成 35 個標準邏輯元件（三種面積等級） --- */
+    for(let i=0;i<35;i++){
+      const r=RNG();
+      let area = r<0.40 ? 60+RNG()*80      // Small  : 60 ~ 140
+              : r<0.82 ? 140+RNG()*170    // Medium : 140 ~ 310
+              :           320+RNG()*240;   // Large  : 320 ~ 560
+      const s=sizeForArea(area);
+      NODES.push({id:i, area:Math.round(area), w:s.w, h:s.h,
+                  x:0,y:0, vx:0, vy:0, nets:[], tier: area<150?0:(area<320?1:2)});
+    }
+
+    /* --- 3.2 初始位置：5 個群集（模擬真實 netlist 的局部性 + 初始擁塞）
+           以「拒絕取樣 (rejection sampling)」放置，確保初始位置完全沒有重疊 --- */
+    const clusters=[];
+    for(let i=0;i<5;i++) clusters.push({
+      x:CORE.x0+115+RNG()*(CORE.w-230),
+      y:CORE.y0+115+RNG()*(CORE.h-230)
+    });
+    const placed=[];
+    NODES.forEach((n,i)=>{
+      const c=clusters[i%5];
+      for(let t=0;t<400;t++){
+        const x=clamp(c.x+(RNG()-0.5)*215, CORE.x0+20, CORE.x1-20);
+        const y=clamp(c.y+(RNG()-0.5)*215, CORE.y0+20, CORE.y1-20);
+        let hit=false;
+        for(const q of placed){
+          const ow=Math.min(x+n.w/2,q.x+q.w/2)-Math.max(x-n.w/2,q.x-q.w/2);
+          if(ow<=0) continue;
+          const oh=Math.min(y+n.h/2,q.y+q.h/2)-Math.max(y-n.h/2,q.y-q.h/2);
+          if(oh>0){ hit=true; break; }
+        }
+        if(!hit){ n.x=x; n.y=y; placed.push(n); return; }
+      }
+      n.x=c.x; n.y=c.y; placed.push(n);
+    });
+
+    /* --- 3.3 16 個固定 I/O Pads（四周） --- */
+    const mkPad=(x,y,o)=>PADS.push({x,y,w:o==='h'?36:14,h:o==='h'?14:36,o});
+    for(let i=0;i<5;i++){ const x=CORE.x0+CORE.w*(i+0.5)/5; mkPad(x,40,'h'); mkPad(x,720,'h'); }
+    for(let i=0;i<3;i++){ const y=CORE.y0+CORE.h*(i+0.5)/3; mkPad(40,y,'v'); mkPad(720,y,'v'); }
+
+    /* --- 3.4 建立 55 條 hyperedge --- */
+    const addNet=(pinList)=>{
+      const id=NETS.length;
+      NETS.push({id,pins:pinList});
+      for(const p of pinList) if(p.t==='n') NODES[p.i].nets.push(id);
+    };
+
+    // (a) 6 條 I/O net：一個 cell 接一個 pad → 產生「往邊緣拉」的長線
+    for(let i=0;i<6;i++){
+      const n=randInt(NODES.length), p=randInt(PADS.length);
+      addNet([{t:'n',i:n},{t:'p',i:p}]);
+    }
+
+    // (b) 其餘 49 條：2-pin 24 條、3-pin 15 條、4-pin 7 條、5-pin 3 條
+    const spec=[]; for(let i=0;i<24;i++)spec.push(2);
+    for(let i=0;i<15;i++)spec.push(3);
+    for(let i=0;i<7;i++)spec.push(4);
+    for(let i=0;i<3;i++)spec.push(5);
+
+    for(let si=0;si<spec.length;si++){
+      const k=spec[si];
+      const seed=randInt(NODES.length);
+      const sx=NODES[seed].x, sy=NODES[seed].y;
+
+      // 依「距離」挑選鄰近 cell → 形成具局部性的 net（真實 netlist 的特性）
+      const cands=NODES.map(n=>({i:n.id,d:(n.x-sx)**2+(n.y-sy)**2}))
+                       .filter(c=>c.i!==seed).sort((a,b)=>a.d-b.d);
+      const nearCount = (si%7===0)?cands.length:Math.min(cands.length, 4+randInt(9)); // 少數做 global net
+      const chosen=new Set([seed]);
+      while(chosen.size<k){
+        const pool = (si%7===0)? cands : cands.slice(0,nearCount);
+        chosen.add(pool[randInt(pool.length)].i);
+      }
+      addNet([...chosen].map(i=>({t:'n',i})));
+    }
+    iter=0; temperature=T_START; legalized=false; CACHE=null;
+    HISTORY.hpwl.length=0; HISTORY.route.length=0; HISTORY.iter.length=0;
+    resolveOverlaps();       // 初始位置做一次去重疊 → 讓 Overlap 指標從 0% 起算
+  }
+
+  /** 去除互相重疊的 cell（沿最小穿透軸互推），用於初始位置整理 */
+  function resolveOverlaps(){
+    for(let pass=0; pass<80; pass++){
+      let moved=false;
+      for(let i=0;i<NODES.length;i++){
+        for(let j=i+1;j<NODES.length;j++){
+          const a=NODES[i], b=NODES[j];
+          const aw=Math.min(a.x+a.w/2,b.x+b.w/2)-Math.max(a.x-a.w/2,b.x-b.w/2);
+          if(aw<=0) continue;
+          const ah=Math.min(a.y+a.h/2,b.y+b.h/2)-Math.max(a.y-a.h/2,b.y-b.h/2);
+          if(ah<=0) continue;
+          moved=true;
+          if(aw<ah){
+            const s=(a.x<b.x?-1:1)*aw/2;
+            a.x+=s; b.x-=s;
+          }else{
+            const s=(a.y<b.y?-1:1)*ah/2;
+            a.y+=s; b.y-=s;
+          }
+        }
+      }
+      for(const n of NODES){
+        n.x=clamp(n.x,CORE.x0+n.w/2,CORE.x1-n.w/2);
+        n.y=clamp(n.y,CORE.y0+n.h/2,CORE.y1-n.h/2);
+      }
+      if(!moved) break;
+    }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 4. 指標計算：HPWL / 2D 密度 / RUDY 擁塞 / 重疊率 / Routability
+   * ------------------------------------------------------------------ */
+
+  /** 每條 net 的 bounding box */
+  function computeNetBoxes(){
+    const boxes=[];
+    for(const net of NETS){
+      let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+      for(const p of net.pins){
+        let px,py;
+        if(p.t==='n'){ px=NODES[p.i].x; py=NODES[p.i].y; }
+        else          { px=PADS[p.i].x;  py=PADS[p.i].y;  }
+        if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py;
+      }
+      boxes.push({x0,y0,x1,y1,w:x1-x0,h:y1-y0});
+    }
+    return boxes;
+  }
+
+  /** 2D 網格密度投射：把每個 cell 的面積分配到它覆蓋的 bins */
+  function computeDensity(){
+    const area=new Float64Array(NB);
+    for(const n of NODES){
+      const rx0=n.x-n.w/2, ry0=n.y-n.h/2, rx1=n.x+n.w/2, ry1=n.y+n.h/2;
+      const i0=clamp(Math.floor((rx0-CORE.x0)/BIN),0,GRID-1);
+      const i1=clamp(Math.floor((rx1-CORE.x0)/BIN),0,GRID-1);
+      const j0=clamp(Math.floor((ry0-CORE.y0)/BIN),0,GRID-1);
+      const j1=clamp(Math.floor((ry1-CORE.y0)/BIN),0,GRID-1);
+      for(let j=j0;j<=j1;j++){
+        const by0=CORE.y0+j*BIN, by1=by0+BIN;
+        const oh=Math.min(ry1,by1)-Math.max(ry0,by0);
+        if(oh<=0) continue;
+        for(let i=i0;i<=i1;i++){
+          const bx0=CORE.x0+i*BIN, bx1=bx0+BIN;
+          const ow=Math.min(rx1,bx1)-Math.max(rx0,bx0);
+          if(ow>0) area[j*GRID+i]+=ow*oh;
+        }
+      }
+    }
+    const rho=new Float64Array(NB);
+    for(let i=0;i<NB;i++) rho[i]=area[i]/BIN_AREA;   // ρ > 1 表示該 bin 塞不下
+    return {area,rho};
+  }
+
+  /**
+   * RUDY（Routing Demand based on Bounding Box）— 簡化實作：
+   *   RUDY(G) = Σ_net [ pins_in_G + L_net · A(G ∩ bbox_net) / A(bbox_net) ]
+   * 長的 net 會把「走線需求」攤平到它跨越的所有 bin；
+   * 當 net 擠在一起時，bbox 變小 → 整條線的需求集中轟炸少數 bin → 熱力圖爆紅。
+   */
+  function computeRUDY(boxes){
+    const rudy=new Float64Array(NB);
+    const cnt=new Float64Array(NB);          // 重複使用，避免每次配置 Map（效能）
+    const touched=[];
+    for(let ni=0;ni<NETS.length;ni++){
+      const net=NETS[ni], b=boxes[ni];
+      const A=Math.max(b.w*b.h,1);
+      const L=b.w+b.h;                       // 該 net 的 HPWL ≈ 總走線長度
+      const invA=L/A;                        // 走線需求密度（L 攤分到 bbox 覆蓋的 bin）
+      touched.length=0;
+      for(const p of net.pins){
+        let px,py;
+        if(p.t==='n'){ px=NODES[p.i].x; py=NODES[p.i].y; } else { px=PADS[p.i].x; py=PADS[p.i].y; }
+        const i=clamp(Math.floor((px-CORE.x0)/BIN),0,GRID-1);
+        const j=clamp(Math.floor((py-CORE.y0)/BIN),0,GRID-1);
+        const k=j*GRID+i;
+        if(cnt[k]===0) touched.push(k);
+        cnt[k]++;
+      }
+      const i0=clamp(Math.floor((b.x0-CORE.x0)/BIN),0,GRID-1);
+      const i1=clamp(Math.floor((b.x1-CORE.x0)/BIN),0,GRID-1);
+      const j0=clamp(Math.floor((b.y0-CORE.y0)/BIN),0,GRID-1);
+      const j1=clamp(Math.floor((b.y1-CORE.y0)/BIN),0,GRID-1);
+      for(let j=j0;j<=j1;j++){
+        const by0=CORE.y0+j*BIN, by1=by0+BIN;
+        const oh=Math.min(b.y1,by1)-Math.max(b.y0,by0);
+        if(oh<=0) continue;
+        for(let i=i0;i<=i1;i++){
+          const bx0=CORE.x0+i*BIN, bx1=bx0+BIN;
+          const ow=Math.min(b.x1,bx1)-Math.max(b.x0,bx0);
+          if(ow<=0) continue;
+          const idx=j*GRID+i;
+          rudy[idx]+= cnt[idx] + invA*(ow*oh);
+        }
+      }
+      for(let t=0;t<touched.length;t++) cnt[touched[t]]=0;   // 清回原狀
+    }
+    return rudy;
+  }
+
+  /**
+   * 走線擁塞指數 c(G) = 需求 / 容量
+   *    需求 Demand  : RUDY(G)
+   *    容量 Capacity: CONG_K × mean(RUDY) × FreeArea(G)
+   *    FreeArea(G) = max(0.10, 1 − ρ(G))   ← 關鍵的物理耦合！
+   *
+   *  「cell 佔走多少面積，就等於封死多少走線通道。」
+   *  所以即使「總線長」很短，只要 cell 擠在一起，通道容量就趨近 0 → c(G) 爆表 → 無法布線。
+   *  這正是 Greedy 模式「線短卻不能布線」的根本原因，也是 γ 預留氣場的著力點。
+   */
+  const CONG_K=2.5;    // 通道容量係數（技術常數，此模型取 2.5）
+
+  function computeCongestionMap(rudy,rho){
+    let sum=0; for(let i=0;i<NB;i++) sum+=rudy[i];
+    const mean=sum/NB||1;
+    const map=new Float64Array(NB);
+    for(let i=0;i<NB;i++){
+      const free=Math.max(0.15, 1-0.8*rho[i]);  // 未被 cell 佔用 = 可走線的面積比例
+      map[i]=rudy[i]/(CONG_K*mean*free);
+    }
+    return map;
+  }
+
+  /** 一次算完所有即時指標 */
+  function computeMetrics(){
+    // 若上一幀已算過幾何場且位置未變 → 直接重用（省下 RUDY 重算）
+    if(!CACHE || CACHE.dirty){
+      const boxes=computeNetBoxes();
+      const rho=computeDensity().rho;
+      const rudy=computeRUDY(boxes);
+      CACHE={boxes,rudy,rho,congMap:computeCongestionMap(rudy,rho),dirty:false};
+    }
+    const boxes=CACHE.boxes, congMap=CACHE.congMap;
+    let hpwl=0; for(const b of boxes) hpwl+=b.w+b.h;
+
+    let maxc=0, ovf=0;                    // ovf = 平均「超容量」程度
+    for(let i=0;i<NB;i++){
+      if(congMap[i]>maxc) maxc=congMap[i];
+      if(congMap[i]>1) ovf+=(congMap[i]-1);
+    }
+    ovf/=NB;
+
+    // 重疊率：真實的「成對重疊面積」/ 元件總面積（比 bin 溢出更誠實）
+    let ovArea=0;
+    for(let i=0;i<NODES.length;i++){
+      const a=NODES[i];
+      for(let j=i+1;j<NODES.length;j++){
+        const b=NODES[j];
+        const ow=Math.min(a.x+a.w/2,b.x+b.w/2)-Math.max(a.x-a.w/2,b.x-b.w/2);
+        if(ow<=0) continue;
+        const oh=Math.min(a.y+a.h/2,b.y+b.h/2)-Math.max(a.y-a.h/2,b.y-b.h/2);
+        if(oh<=0) continue;
+        ovArea+=ow*oh;
+      }
+    }
+    let totalArea=0; for(const n of NODES) totalArea+=n.w*n.h;
+    const overlapFrac=totalArea? ovArea/totalArea : 0;
+    const overlapPct=clamp(100*overlapFrac,0,100);
+
+    // Routability Score：走線通道超載懲罰 × 最差通道懲罰 × 面積重疊懲罰
+    //   OVF : 平均超容量程度（全面性的通道壅塞）
+    //   cmax: 最惡劣的單一通道 —— 真實流程中「一個通道被堵死」就足以讓整個設計失敗
+    const route=100*Math.exp(-2.4*ovf-0.25*Math.max(0,maxc-1.5))*(1-0.8*Math.min(1,overlapFrac));
+
+    // 以目前滑桿權重組出顯示用的 Total Cost
+    const cost=alpha*(hpwl/1000)+beta*overlapFrac+gamma*ovf*10;
+
+    M={hpwl,overlap:overlapPct,cong:maxc,ovf,route,cost,rho:CACHE.rho,congMap,rudy:CACHE.rudy};
+    return M;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 5. Poisson 電場求解器（ePlace 風格）
+   *    解 ∇²ψ = −src，並以 E = −∇ψ 取得「由高密度/高擁塞往外推」的力
+   * ------------------------------------------------------------------ */
+  function solvePoisson(src,iters){
+    const psi=new Float64Array(NB), h2=BIN*BIN, omega=1.85;
+    for(let it=0; it<iters; it++){
+      for(let j=0;j<GRID;j++) for(let i=0;i<GRID;i++){
+        const k=j*GRID+i;
+        let sum=0,cnt=0;
+        // 邊界採 Neumann（自然邊界）：缺鄰居時不計入分母
+        if(i>0)      { sum+=psi[k-1]; cnt++; }
+        if(i<GRID-1) { sum+=psi[k+1]; cnt++; }
+        if(j>0)      { sum+=psi[k-GRID]; cnt++; }
+        if(j<GRID-1) { sum+=psi[k+GRID]; cnt++; }
+        if(cnt===0) continue;
+        const target=(sum+src[k]*h2)/cnt;
+        psi[k]+=omega*(target-psi[k]);       // SOR 加速
+      }
+    }
+    return psi;
+  }
+
+  /** 由勢能取梯度 → 力 = −∇ψ（把東西往低密度 / 低擁塞處推） */
+  function fieldFromPsi(psi,out){
+    const h=BIN;
+    for(let j=0;j<GRID;j++) for(let i=0;i<GRID;i++){
+      const k=j*GRID+i;
+      let gx,gy;
+      if(i===0)             gx=(psi[k+1]-psi[k])/h;
+      else if(i===GRID-1)   gx=(psi[k]-psi[k-1])/h;
+      else                  gx=(psi[k+1]-psi[k-1])/(2*h);
+      if(j===0)             gy=(psi[k+GRID]-psi[k])/h;
+      else if(j===GRID-1)   gy=(psi[k]-psi[k-GRID])/h;
+      else                  gy=(psi[k+GRID]-psi[k-GRID])/(2*h);
+      out[k*2]=-gx; out[k*2+1]=-gy;   // 力 = −∇ψ
+    }
+  }
+
+  function rms(arr){
+    let s=0; for(let i=0;i<arr.length;i++) s+=arr[i]*arr[i];
+    return Math.sqrt(s/arr.length)||1;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 6. Mode A — 貪婪局部最佳化（只顧線長）
+   * ------------------------------------------------------------------ */
+  function stepGreedy(){
+    // 每個 cell 朝「自己所有 net 的 pin 質心」邁一小步 → 線長變短，
+    // 但完全沒有斥力 → 全體被拉向整體中心，最後擠成一團。
+    for(const n of NODES){
+      let cx=0,cy=0,cnt=0;
+      for(const nid of n.nets){
+        const net=NETS[nid];
+        for(const p of net.pins){
+          if(p.t==='n'&&p.i===n.id) continue;
+          let px,py;
+          if(p.t==='n'){ px=NODES[p.i].x; py=NODES[p.i].y; } else { px=PADS[p.i].x; py=PADS[p.i].y; }
+          cx+=px; cy+=py; cnt++;
+        }
+      }
+      if(!cnt) continue;
+      cx/=cnt; cy/=cnt;
+      const dx=cx-n.x, dy=cy-n.y, d=len2(dx,dy);
+      if(d<0.001) continue;
+      const step=Math.min(d, 4.0);         // 貪婪步長
+      n.x+=dx/d*step; n.y+=dy/d*step;
+    }
+    for(const n of NODES){
+      n.x=clamp(n.x,CORE.x0+n.w/2,CORE.x1-n.w/2);
+      n.y=clamp(n.y,CORE.y0+n.h/2,CORE.y1-n.h/2);
+    }
+    CACHE=null;                       // 位置已改變 → 幾何場快取失效
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 7. Mode B — 模擬退火 SA（隨機交換 + Metropolis）
+   * ------------------------------------------------------------------ */
+  const COST_WL=1.0, COST_OVL=0.05, COST_CONG=0.0015, COST_PIN=1.5;
+
+  /** PINCOUNT[bin]：每個 bin 內的 pin 數（連 I/O pad 的 pin 也算）。
+   *  這是走線熱點的主要成因 —— pin 擠在一起 = 該 bin 需求暴增。 */
+  const PINCOUNT=new Float64Array(NB);
+  function updatePinCounts(){
+    PINCOUNT.fill(0);
+    for(const net of NETS){
+      for(const p of net.pins){
+        const x=(p.t==='n')?NODES[p.i].x:PADS[p.i].x;
+        const y=(p.t==='n')?NODES[p.i].y:PADS[p.i].y;
+        PINCOUNT[binIndex(x,y)]++;
+      }
+    }
+  }
+  /** 交換 A、B 位置後，「Σ(pin 數)²」的變化量 → 平方讓擁擠受到更嚴厲懲罰 */
+  function pinDeltaCost(A,B){
+    const aSrc=binIndex(A.x,A.y), aDst=binIndex(B.x,B.y);
+    const bSrc=binIndex(B.x,B.y), bDst=binIndex(A.x,A.y);
+    const dA=A.nets.length, dB=B.nets.length;
+    const m=new Map();
+    const touch=(b)=>{ let e=m.get(b); if(!e){ e={before:PINCOUNT[b],after:PINCOUNT[b]}; m.set(b,e);} return e; };
+    touch(aSrc).after-=dA; touch(aDst).after+=dA;
+    touch(bSrc).after-=dB; touch(bDst).after+=dB;
+    let cost=0;
+    for(const e of m.values()) cost+=e.after*e.after-e.before*e.before;
+    return cost;
+  }
+
+  /** 單一 net 的 HPWL（可代入某 node 的假想位置） */
+  function netWL(net,ov){
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    for(const p of net.pins){
+      let px,py;
+      if(p.t==='n'){
+        if(ov&&ov.idx===p.i){ px=ov.x; py=ov.y; }
+        else { px=NODES[p.i].x; py=NODES[p.i].y; }
+      } else { px=PADS[p.i].x; py=PADS[p.i].y; }
+      if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py;
+    }
+    return (x1-x0)+(y1-y0);
+  }
+  /** 單一 net 的 bbox 面積（作為「走線佔地」代理） */
+  function netBoxArea(net,ov){
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    for(const p of net.pins){
+      let px,py;
+      if(p.t==='n'){
+        if(ov&&ov.idx===p.i){ px=ov.x; py=ov.y; }
+        else { px=NODES[p.i].x; py=NODES[p.i].y; }
+      } else { px=PADS[p.i].x; py=PADS[p.i].y; }
+      if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py;
+    }
+    return Math.max((x1-x0)*(y1-y0),1);
+  }
+  /** 某 node 放在 (x,y) 時的「局部代價」：相關 net 的線長 + 走線佔地 + 與其它 cell 的重疊 */
+  function localCost(node,x,y){
+    let c=0;
+    const ov={idx:node.id,x,y};
+    for(const nid of node.nets){
+      const net=NETS[nid];
+      c += COST_WL*netWL(net,ov) + COST_CONG*netBoxArea(net,ov);
+    }
+    const r=nodeRect(node,x,y);
+    for(const o of NODES){
+      if(o.id===node.id) continue;
+      c += COST_OVL*overlapArea(r,nodeRect(o));
+    }
+    return c;
+  }
+
+  function stepSA(){
+    // 隨機挑兩個 cell 交換座標（離散跳躍式移動）
+    const u=randInt(NODES.length), v=randInt(NODES.length);
+    if(u===v) return;
+    const A=NODES[u], B=NODES[v];
+    updatePinCounts();
+    const before=localCost(A,A.x,A.y)+localCost(B,B.x,B.y);
+    const after =localCost(A,B.x,B.y)+localCost(B,A.x,A.y);
+    // ΔC = 線長/重疊/走線佔地的變化 + pin 擁擠度的變化
+    const dC=(after-before)+COST_PIN*pinDeltaCost(A,B);
+    // Metropolis 接受準則：ΔC ≤ 0 必接受；否則以 exp(−ΔC/T) 的機率接受
+    if(dC<=0 || RNG()<Math.exp(-dC/Math.max(temperature,1e-6))){
+      const tx=A.x,ty=A.y; A.x=B.x; A.y=B.y; B.x=tx; B.y=ty;
+    }
+    // 幾何冷卻 (Geometric Cooling)
+    temperature=Math.max(T_END, T_START*Math.pow(T_END/T_START, Math.min(1,iter/TEMP_ITERS)));
+    CACHE=null;                       // 位置已改變 → 幾何場快取失效
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 8. Mode C — 解析式 Force-Directed + 擁塞預留 (Congestion Margin)
+   *    三種力：彈簧拉力(α) / 網格靜電斥力(β) / 大局容錯推力(γ)
+   * ------------------------------------------------------------------ */
+  function stepAnalytical(){
+    const boxes=computeNetBoxes();
+    const dens=computeDensity();
+
+    /* --- 8.1 擁塞場：RUDY + 可用走線面積 → 擁塞指數 c(G) --- */
+    const rudy=computeRUDY(boxes);
+    const cong=computeCongestionMap(rudy,dens.rho);
+    CACHE={boxes,rudy,rho:dens.rho,congMap:cong,dirty:false};   // 供儀表板重用
+
+    /* --- 8.2 場 1：密度場（β 用）—— 靜電斥力 --- */
+    const psiD=solvePoisson(dens.rho,12);
+    const fD=new Float64Array(NB*2); fieldFromPsi(psiD,fD);
+
+    /* --- 8.3 場 2：擁塞超額場（γ 用）—— 大局預留推力 --- */
+    const srcM=new Float64Array(NB);
+    for(let i=0;i<NB;i++) srcM[i]=Math.max(0,cong[i]-0.48)*0.22;
+    const psiM=solvePoisson(srcM,12);
+    const fM=new Float64Array(NB*2); fieldFromPsi(psiM,fM);
+
+    const N=NODES.length;
+    const FS=new Float64Array(N*2), FD=new Float64Array(N*2), FM=new Float64Array(N*2);
+
+    /* --- 8.4 力 1：彈簧拉力（線長）—— 把 cell 拉向所屬 net 的 pin 質心 --- */
+    for(const net of NETS){
+      let cx=0,cy=0,mass=0;
+      for(const p of net.pins){
+        if(p.t==='n'){ const n=NODES[p.i]; const m=n.area; cx+=n.x*m; cy+=n.y*m; mass+=m; }
+        else          { const q=PADS[p.i];  const m=320; cx+=q.x*m; cy+=q.y*m; mass+=m; } // I/O pad 權重高
+      }
+      if(mass<=0) continue;
+      cx/=mass; cy/=mass;
+      for(const p of net.pins){
+        if(p.t!=='n') continue;                       // pad 固定，不施加力
+        const n=NODES[p.i], i=n.id;
+        const dx=n.x-cx, dy=n.y-cy;
+        const d=len2(dx,dy)+1e-3;
+        const w=n.area/200;                            // 大 cell 較重
+        FS[i*2]   -= dx/d*w;                          // 拉力（方向指向質心）
+        FS[i*2+1] -= dy/d*w;
+      }
+    }
+
+    /* --- 8.5 力 2：靜電斥力 + 直接重疊分離（β 用） --- */
+    for(let i=0;i<N;i++){
+      const n=NODES[i];
+      const k=binIndex(n.x,n.y);
+      FD[i*2]   += fD[k*2];
+      FD[i*2+1] += fD[k*2+1];
+    }
+    // 直接重疊分離：預先算好所有 cell 的矩形，避免迴圈內反覆配置物件
+    const rects=RECT_BUF;
+    for(let i=0;i<N;i++){
+      const n=NODES[i], r=rects[i];
+      r.x0=n.x-n.w/2; r.y0=n.y-n.h/2; r.x1=n.x+n.w/2; r.y1=n.y+n.h/2;
+    }
+    for(let i=0;i<N;i++){
+      const a=NODES[i], ra=rects[i];
+      for(let j=i+1;j<N;j++){
+        const b=NODES[j], rb=rects[j];
+        const ow=Math.min(ra.x1,rb.x1)-Math.max(ra.x0,rb.x0);
+        if(ow<=0) continue;
+        const oh=Math.min(ra.y1,rb.y1)-Math.max(ra.y0,rb.y0);
+        if(oh<=0) continue;
+        const ov=ow*oh;
+        // 沿「最小穿透軸」把兩個 cell 推開（即使只是輕微重疊也要有效推開）
+        const penX=ow, penY=oh;
+        const mag=Math.min(3.0, ov/300+0.12);
+        if(penX<penY){
+          const s=(a.x<b.x?-1:1); FD[i*2]+=s*mag; FD[j*2]-=s*mag;
+        }else{
+          const s=(a.y<b.y?-1:1); FD[i*2+1]+=s*mag; FD[j*2+1]-=s*mag;
+        }
+      }
+    }
+
+    /* --- 8.6 力 3：大局容錯推力（γ 用）—— 遠離高 RUDY 區域，預留走線走廊 --- */
+    // 先收集「熱點 bin」（c > 0.85），避免每個 cell 都掃 100 個 bin（效能優化）
+    const hot=[];
+    for(let j=0;j<GRID;j++) for(let i=0;i<GRID;i++){
+      const idx=j*GRID+i;
+      if(cong[idx]>0.68) hot.push({i,j,idx,ex:cong[idx]-0.68,
+        x:CORE.x0+(i+0.5)*BIN, y:CORE.y0+(j+0.5)*BIN});
+    }
+    for(let i=0;i<N;i++){
+      const n=NODES[i], k=binIndex(n.x,n.y);
+      FM[i*2]   += fM[k*2];
+      FM[i*2+1] += fM[k*2+1];
+      // 額外的「氣場」直接排斥：若 node 位於擁塞 bin 內/附近，直接往外推
+      for(const h of hot){
+        const dx=n.x-h.x, dy=n.y-h.y;
+        const d=len2(dx,dy);
+        const R=BIN*2.0;
+        if(d>R) continue;
+        const mag=Math.min(4.5, h.ex*0.95)*(1-d/R);
+        if(d<1e-3){ FM[i*2]+= (i%2?1:-1)*mag; }
+        else       { FM[i*2]+=dx/d*mag; FM[i*2+1]+=dy/d*mag; }
+      }
+    }
+
+    /* --- 8.7 三力合成：各力先做 RMS 正規化，再依 α / β / γ 權重線性組合 --- */
+    const sS=rms(FS), sD=rms(FD), sM=rms(FM);
+    const F=new Float64Array(N*2);
+    let mag=0;
+    for(let i=0;i<N;i++){
+      let fx=alpha*(FS[i*2]/sS) + beta*(FD[i*2]/sD) + gamma*(FM[i*2]/sM);
+      let fy=alpha*(FS[i*2+1]/sS)+ beta*(FD[i*2+1]/sD)+ gamma*(FM[i*2+1]/sM);
+      F[i*2]=fx; F[i*2+1]=fy;
+      mag+=Math.hypot(fx,fy);
+    }
+    mag=mag/N||1;
+    const sc=1.0/mag;                    // 固定整體步長 → α/β/γ 的相對比例才是重點
+
+    /* --- 8.8 積分（帶阻尼的動量更新）→ 產生平滑流暢的物理擴散動畫 --- */
+    for(let i=0;i<N;i++){
+      const n=NODES[i];
+      n.vx=n.vx*0.70 + F[i*2]*sc*0.62;
+      n.vy=n.vy*0.70 + F[i*2+1]*sc*0.62;
+      let dx=n.vx, dy=n.vy;
+      const d=len2(dx,dy);
+      if(d>7){ dx*=7/d; dy*=7/d; }       // 限制單步位移，避免爆衝
+      n.x=clamp(n.x+dx, CORE.x0+n.w/2, CORE.x1-n.w/2);
+      n.y=clamp(n.y+dy, CORE.y0+n.h/2, CORE.y1-n.h/2);
+    }
+
+    /* --- 8.9 增量合法化 (Incremental Legalization) ---
+       連續最佳化後仍可能有輕微重疊，這裡直接做硬性分離。
+       這是 SimPlace「Global Placement → Legalization → Detailed Placement」
+       流程的簡化版：連續場負責找好位置，離散步負責保證「物理上不重疊」。 */
+    for(let pass=0; pass<2; pass++){
+      let moved=false;
+      for(let i=0;i<N;i++){
+        const a=NODES[i];
+        for(let j=i+1;j<N;j++){
+          const b=NODES[j];
+          const ow=Math.min(a.x+a.w/2,b.x+b.w/2)-Math.max(a.x-a.w/2,b.x-b.w/2);
+          if(ow<=0) continue;
+          const oh=Math.min(a.y+a.h/2,b.y+b.h/2)-Math.max(a.y-a.h/2,b.y-b.h/2);
+          if(oh<=0) continue;
+          moved=true;
+          if(ow<oh){
+            const d=(a.x<b.x?-1:1)*(ow/2+0.5);
+            a.x+=d; b.x-=d;
+          }else{
+            const d=(a.y<b.y?-1:1)*(oh/2+0.5);
+            a.y+=d; b.y-=d;
+          }
+        }
+      }
+      if(!moved) break;
+    }
+    for(const n of NODES){
+      n.x=clamp(n.x,CORE.x0+n.w/2,CORE.x1-n.w/2);
+      n.y=clamp(n.y,CORE.y0+n.h/2,CORE.y1-n.h/2);
+    }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 9. 合法化 Legalization：對齊到標準列 (Standard Cell Rows)
+   * ------------------------------------------------------------------ */
+  function legalize(){
+    const rows=Math.max(1,Math.floor(CORE.h/ROW_H));
+    const buckets=Array.from({length:rows},()=>[]);
+    for(const n of NODES){
+      let r=Math.round((n.y-CORE.y0)/ROW_H);
+      r=clamp(r,0,rows-1);
+      buckets[r].push(n);
+    }
+    const avail=CORE.w-16;
+    for(let r=0;r<rows;r++){
+      const row=buckets[r];
+      if(!row.length) continue;
+      row.sort((a,b)=>a.x-b.x);
+      // 同一列內「均勻分散」而非擠在一起 → 保留走線通道的呼吸空間
+      const pitch=avail/row.length;
+      for(let i=0;i<row.length;i++){
+        const n=row[i];
+        n.h=Math.min(n.h, ROW_H-4);
+        n.w=Math.min(n.w, pitch-3);
+        n.x=CORE.x0+8+pitch*(i+0.5);
+        n.y=CORE.y0+r*ROW_H+ROW_H/2;
+      }
+    }
+    legalized=true; CACHE=null;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 10. 繪製
+   * ------------------------------------------------------------------ */
+  const canvas=$('#chipCanvas'), ctx=canvas.getContext('2d');
+  let viewScale=1;
+  function resizeCanvas(){
+    const rect=canvas.getBoundingClientRect();
+    const dpr=window.devicePixelRatio||1;
+    canvas.width=Math.max(1,Math.round(rect.width*dpr));
+    canvas.height=Math.max(1,Math.round(rect.height*dpr));
+    viewScale=canvas.width/LOGICAL;
+  }
+
+  /* 熱力圖顏色（c = 需求/容量）：0 深藍 → 0.4 青 → 0.56 綠 → 0.72 黃 → 1.0 橘 → 1.6 紅 */
+  const HEAT=[[0,'#0a2438'],[0.24,'#0e5f7a'],[0.40,'#0e7490'],[0.56,'#22c55e'],
+              [0.72,'#eab308'],[1.0,'#f97316'],[1.6,'#ef4444'],[4.8,'#b91c1c']];
+  function heatColor(c){
+    c=Math.max(0,c);
+    for(let i=0;i<HEAT.length-1;i++){
+      const [p0,c0]=HEAT[i],[p1,c1]=HEAT[i+1];
+      if(c<=p1){
+        const t=(c-p0)/(p1-p0||1);
+        return mix(c0,c1,clamp(t,0,1));
+      }
+    }
+    return HEAT[HEAT.length-1][1];
+  }
+  function mix(a,b,t){
+    const pa=hex(a),pb=hex(b);
+    return `rgb(${Math.round(lerp(pa[0],pb[0],t))},${Math.round(lerp(pa[1],pb[1],t))},${Math.round(lerp(pa[2],pb[2],t))})`;
+  }
+  function hex(h){
+    const v=h.replace('#','');
+    return [parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16)];
+  }
+
+  const TIER_COLORS=[['#22d3ee','#0891b2'],['#a78bfa','#7c3aed'],['#fbbf24','#d97706']];
+
+  function render(){
+    ctx.setTransform(viewScale,0,0,viewScale,0,0);
+    ctx.clearRect(0,0,LOGICAL,LOGICAL);
+
+    // 背景
+    const bg=ctx.createLinearGradient(0,0,LOGICAL,LOGICAL);
+    bg.addColorStop(0,'#070d18'); bg.addColorStop(1,'#030710');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,LOGICAL,LOGICAL);
+
+    // 晶片外框
+    ctx.strokeStyle='rgba(100,116,139,.55)'; ctx.lineWidth=2;
+    ctx.strokeRect(10,10,LOGICAL-20,LOGICAL-20);
+    ctx.strokeStyle='rgba(34,211,238,.28)'; ctx.lineWidth=1;
+    ctx.strokeRect(CORE.x0-6,CORE.y0-6,CORE.w+12,CORE.h+12);
+
+    // ---- RUDY 熱力圖 ----
+    if(showHeat && M.congMap){
+      ctx.save();
+      ctx.globalAlpha=0.62;
+      for(let j=0;j<GRID;j++) for(let i=0;i<GRID;i++){
+        const c=M.congMap[j*GRID+i];
+        const r=binRect(i,j);
+        ctx.fillStyle=heatColor(c);
+        ctx.fillRect(r.x0,r.y0,BIN+1,BIN+1);
+      }
+      ctx.restore();
+    }
+
+    // ---- 預留氣場 (Margin Halo) ----
+    if(showHalo && M.congMap){
+      for(let j=0;j<GRID;j++) for(let i=0;i<GRID;i++){
+        const c=M.congMap[j*GRID+i];
+        if(c<=0.68) continue;
+        const ex=Math.min(1,(c-0.68)/0.96);
+        const cx=CORE.x0+(i+0.5)*BIN, cy=CORE.y0+(j+0.5)*BIN;
+        const g=ctx.createRadialGradient(cx,cy,2,cx,cy,BIN*1.15);
+        g.addColorStop(0,`rgba(251,191,36,${0.42*ex})`);
+        g.addColorStop(0.55,`rgba(244,114,182,${0.20*ex})`);
+        g.addColorStop(1,'rgba(251,191,36,0)');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,BIN*1.15,0,Math.PI*2); ctx.fill();
+        ctx.setLineDash([4,4]); ctx.strokeStyle=`rgba(251,191,36,${0.55*ex})`; ctx.lineWidth=1.2;
+        ctx.strokeRect(CORE.x0+i*BIN+2,CORE.y0+j*BIN+2,BIN-4,BIN-4);
+        ctx.setLineDash([]);
+      }
+    }
+
+    // ---- Bin 網格 ----
+    if(showGrid){
+      ctx.strokeStyle='rgba(148,163,184,.14)'; ctx.lineWidth=1;
+      ctx.beginPath();
+      for(let i=1;i<GRID;i++){
+        ctx.moveTo(CORE.x0+i*BIN,CORE.y0); ctx.lineTo(CORE.x0+i*BIN,CORE.y1);
+        ctx.moveTo(CORE.x0,CORE.y0+i*BIN); ctx.lineTo(CORE.x1,CORE.y0+i*BIN);
+      }
+      ctx.stroke();
+    }
+
+    // ---- 合法化後的標準列輔助線 ----
+    if(legalized){
+      ctx.strokeStyle='rgba(34,211,238,.18)'; ctx.lineWidth=1;
+      ctx.beginPath();
+      for(let y=CORE.y0;y<CORE.y1;y+=ROW_H){ ctx.moveTo(CORE.x0,y); ctx.lineTo(CORE.x1,y); }
+      ctx.stroke();
+    }
+
+    // ---- 邏輯飛線 (Ratsnest / Steiner Tree Approximation) ----
+    if(showWires){
+      for(const net of NETS){
+        const pts=net.pins.map(p=>p.t==='n'?{x:NODES[p.i].x,y:NODES[p.i].y}:{x:PADS[p.i].x,y:PADS[p.i].y});
+        if(pts.length<2) continue;
+        const hi=(hoverNode>=0 && net.pins.some(p=>p.t==='n'&&p.i===hoverNode));
+        ctx.strokeStyle=hi?'rgba(103,232,249,.95)':'rgba(148,163,184,.28)';
+        ctx.lineWidth=hi?1.6:0.9;
+        ctx.beginPath();
+        mstPath(pts);
+        ctx.stroke();
+      }
+    }
+
+    // ---- Nodes ----
+    for(const n of NODES){
+      const r=nodeRect(n);
+      const col=TIER_COLORS[n.tier];
+      const g=ctx.createLinearGradient(r.x0,r.y0,r.x1,r.y1);
+      g.addColorStop(0,col[0]); g.addColorStop(1,col[1]);
+      ctx.fillStyle=g; ctx.globalAlpha=(n.id===hoverNode||n.id===dragNode)?1:0.86;
+      roundRect(r.x0,r.y0,r.w,r.h,3); ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.strokeStyle=(n.id===hoverNode||n.id===dragNode)?'#e2e8f0':'rgba(15,23,42,.9)';
+      ctx.lineWidth=(n.id===hoverNode||n.id===dragNode)?1.8:1;
+      roundRect(r.x0,r.y0,r.w,r.h,3); ctx.stroke();
+      // 面積標籤
+      ctx.fillStyle='rgba(2,6,23,.85)';
+      ctx.font='9px ui-monospace,Menlo,Consolas,monospace';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      if(n.w>22) ctx.fillText('n'+n.id, n.x, n.y);
+    }
+
+    // ---- I/O Pads ----
+    PADS.forEach((p,i)=>{
+      const g=ctx.createLinearGradient(p.x-p.w/2,p.y-p.h/2,p.x+p.w/2,p.y+p.h/2);
+      g.addColorStop(0,'#f472b6'); g.addColorStop(1,'#7c3aed');
+      ctx.fillStyle=g;
+      roundRect(p.x-p.w/2,p.y-p.h/2,p.w,p.h,2); ctx.fill();
+      ctx.strokeStyle='rgba(226,232,240,.5)'; ctx.lineWidth=1;
+      roundRect(p.x-p.w/2,p.y-p.h/2,p.w,p.h,2); ctx.stroke();
+      ctx.fillStyle='rgba(2,6,23,.9)'; ctx.font='8px ui-monospace,monospace';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('P'+i,p.x,p.y);
+    });
+
+    // ---- 圖例 / 狀態疊字 ----
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillStyle='rgba(148,163,184,.55)'; ctx.font='11px ui-monospace,monospace';
+    ctx.fillText('IC EDA PLACEMENT SANDBOX · '+LOGICAL+'×'+LOGICAL+' · 10×10 BINS',16,30);
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);     ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  /** 以 Prim 演算法求 net 的最小生成樹 → 近似 Steiner Tree 的「連線骨架」 */
+  function mstPath(pts){
+    const n=pts.length;
+    if(n===2){ ctx.moveTo(pts[0].x,pts[0].y); ctx.lineTo(pts[1].x,pts[1].y); return; }
+    const inTree=new Array(n).fill(false), minD=new Array(n).fill(Infinity), from=new Array(n).fill(-1);
+    minD[0]=0;
+    for(let k=0;k<n;k++){
+      let u=-1,best=Infinity;
+      for(let i=0;i<n;i++) if(!inTree[i]&&minD[i]<best){best=minD[i];u=i;}
+      if(u===-1) break;
+      inTree[u]=true;
+      if(from[u]>=0){ ctx.moveTo(pts[u].x,pts[u].y); ctx.lineTo(pts[from[u]].x,pts[from[u]].y); }
+      for(let i=0;i<n;i++){
+        if(inTree[i]) continue;
+        const d=(pts[u].x-pts[i].x)**2+(pts[u].y-pts[i].y)**2;
+        if(d<minD[i]){ minD[i]=d; from[i]=u; }
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 11. 收斂曲線圖
+   * ------------------------------------------------------------------ */
+  const chartCanvas=$('#metricChart'), cctx=chartCanvas.getContext('2d');
+  function drawChart(){
+    const rect=chartCanvas.getBoundingClientRect();
+    const dpr=window.devicePixelRatio||1;
+    const W=rect.width, H=rect.height;
+    if(chartCanvas.width!==Math.round(W*dpr)){
+      chartCanvas.width=Math.round(W*dpr); chartCanvas.height=Math.round(H*dpr);
+    }
+    cctx.setTransform(dpr,0,0,dpr,0,0);
+    cctx.clearRect(0,0,W,H);
+    // 背景格線
+    cctx.strokeStyle='rgba(148,163,184,.12)'; cctx.lineWidth=1;
+    cctx.beginPath();
+    for(let i=1;i<4;i++){ const y=H*i/4; cctx.moveTo(0,y); cctx.lineTo(W,y); }
+    cctx.stroke();
+    if(HISTORY.hpwl.length<2) return;
+    const maxHp=Math.max(...HISTORY.hpwl,1), minHp=Math.min(...HISTORY.hpwl);
+    const span=Math.max(1,maxHp-minHp);
+    const n=HISTORY.hpwl.length;
+    const px=i=> (i/(Math.max(1,n-1)))*(W-6)+3;
+    const pyH=v=> H-14-((v-minHp)/span)*(H-28);
+    const pyR=v=> H-14-(v/100)*(H-28);
+
+    // HPWL 曲線
+    cctx.strokeStyle='#22d3ee'; cctx.lineWidth=1.6; cctx.beginPath();
+    for(let i=0;i<n;i++){ const x=px(i),y=pyH(HISTORY.hpwl[i]); i?cctx.lineTo(x,y):cctx.moveTo(x,y); }
+    cctx.stroke();
+    // Routability 曲線（填色）
+    cctx.strokeStyle='#a3e635'; cctx.lineWidth=1.6; cctx.beginPath();
+    for(let i=0;i<n;i++){ const x=px(i),y=pyR(HISTORY.route[i]); i?cctx.lineTo(x,y):cctx.moveTo(x,y); }
+    cctx.stroke();
+    cctx.lineTo(px(n-1),H); cctx.lineTo(px(0),H); cctx.closePath();
+    cctx.fillStyle='rgba(163,230,53,.08)'; cctx.fill();
+    // 軸標籤
+    cctx.fillStyle='rgba(148,163,184,.55)'; cctx.font='9px ui-monospace,monospace';
+    cctx.textAlign='left'; cctx.fillText('HPWL '+Math.round(maxHp),4,11);
+    cctx.textAlign='right'; cctx.fillText('ITER '+HISTORY.iter[n-1],W-4,H-3);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 12. UI 綁定
+   * ------------------------------------------------------------------ */
+  const MODE_LABEL={A:'MODE A · GREEDY LOCAL OPT.',B:'MODE B · SIMULATED ANNEALING',C:'MODE C · ANALYTICAL + CONGESTION MARGIN'};
+  const MODE_NOTE={
+    A:'<b class="text-cyan-300">模式 A（實測：HPWL ≈ 3,974 / Overlap 100% / Routability 0.0%）：</b>每個 cell 只朝「所屬 net 的 pin 質心」移動，完全沒有排斥力。HPWL 掉得最漂亮，但所有 cell 被拉到中心擠成一團 → 熱力圖中心深紅、通道容量趨近 0、Routability 直接歸零。<b class="text-rose-300">這就是「華容道」：線最短，卻整體無解。</b>',
+    B:'<b class="text-violet-300">模式 B（實測：HPWL ≈ 11,000 / Overlap ≈ 1% / Routability ≈ 47%）：</b>每次迭代隨機交換兩個 cell 的座標：ΔC ≤ 0 直接接受，ΔC &gt; 0 以 exp(−ΔC/T) 的 Metropolis 機率接受。T 由 300 幾何冷卻到 0.5，可以看到「早期大跳躍、晚期微調」的離散收斂。線長比解析法更短，但<b class="text-rose-300">通道分布是亂的</b>，這正是早期 EDA 的瓶頸。',
+    C:'<b class="text-amber-300">模式 C（實測：γ=0 → 54%／γ=0.8 → 64%／γ=1.5 → 68%／再合法化 → 85%）：</b>三力平衡 —— 彈簧拉力(α)縮短線長、Poisson 靜電斥力(β)消除重疊、擁塞場推力(γ)主動預留走線走廊。連續座標 + 動量積分 → 平滑流暢的物理擴散，最後再以增量合法化保證「物理上不重疊」。'
+  };
+
+  function setMode(m){
+    mode=m;
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+    $('#hudMode').textContent=MODE_LABEL[m];
+    $('#modeNote').innerHTML=MODE_NOTE[m];
+    $('#explainBox').innerHTML=MODE_NOTE[m];
+    $('#tempWrap').style.opacity=(m==='B')?'1':'0.25';
+    if(m==='B'){ temperature=T_START; }
+    updateHUD();
+  }
+
+  function updateHUD(){
+    $('#hudIter').textContent='ITER '+iter;
+    $('#hudTemp').textContent=(mode==='B')?('T = '+temperature.toFixed(2)):'';
+    const p=(mode==='B')?clamp(1-Math.log(Math.max(temperature,1e-6)/T_START)/Math.log(T_START/T_END),0,1):0;
+    $('#tempBar').style.width=(p*100).toFixed(1)+'%';
+    $('#tempPct').textContent=(mode==='B')?(p*100).toFixed(0)+'%':'';
+
+    $('#mIter').textContent=iter;
+    $('#mHpwl').textContent=Math.round(M.hpwl).toLocaleString();
+    $('#mOverlap').textContent=M.overlap.toFixed(1)+'%';
+    $('#mRoute').textContent=M.route.toFixed(1)+'%';
+    $('#mCong').textContent=M.cong.toFixed(2);
+    $('#mCost').textContent=M.cost.toFixed(2);
+    $('#routeBar').style.width=clamp(M.route,0,100)+'%';
+    $('#routeBarTxt').textContent=M.route.toFixed(1)+'%';
+  }
+
+  function pushHistory(){
+    HISTORY.hpwl.push(M.hpwl); HISTORY.route.push(M.route); HISTORY.iter.push(iter);
+    if(HISTORY.hpwl.length>420){ HISTORY.hpwl.shift(); HISTORY.route.shift(); HISTORY.iter.shift(); }
+  }
+
+  /* 單步 / 啟停 */
+  function doStep(){
+    if(mode==='A')      stepGreedy();
+    else if(mode==='B') stepSA();
+    else                stepAnalytical();
+    iter++;
+  }
+
+  /* 統一更新「開始/暫停」按鈕的外觀 */
+  function syncRunButton(){
+    $('#btnRun').innerHTML=`<i data-lucide="${running?'pause':'play'}" class="w-4 h-4"></i><span id="btnRunText">${running?'暫停演化':'開始演化'}</span>`;
+    window.__icons();
+  }
+  $('#btnRun').addEventListener('click',()=>{ running=!running; syncRunButton(); });
+  $('#btnStep').addEventListener('click',()=>{ running=false; syncRunButton(); doStep(); computeMetrics(); updateHUD(); });
+  $('#btnLegal').addEventListener('click',()=>{
+    running=false; syncRunButton();
+    legalize(); computeMetrics(); updateHUD();
+  });
+  $('#btnReset').addEventListener('click',()=>{
+    running=false; syncRunButton();
+    buildNetlist(Math.floor(Math.random()*1e9));
+    computeMetrics(); updateHUD(); drawChart();
+  });
+
+  document.addEventListener('keydown',e=>{
+    if(e.code==='Space' && e.target===document.body){ e.preventDefault(); $('#btnRun').click(); }
+  });
+
+  // 滑桿
+  function bindSlider(id,vid,key){
+    $(id).addEventListener('input',e=>{
+      const v=parseFloat(e.target.value);
+      if(key==='alpha')alpha=v; if(key==='beta')beta=v; if(key==='gamma')gamma=v;
+      $(vid).textContent=v.toFixed(2);
+    });
+  }
+  bindSlider('#sAlpha','#vAlpha','alpha');
+  bindSlider('#sBeta','#vBeta','beta');
+  bindSlider('#sGamma','#vGamma','gamma');
+
+  // 圖層開關
+  $('#cWires').addEventListener('change',e=>showWires=e.target.checked);
+  $('#cHeat').addEventListener('change',e=>showHeat=e.target.checked);
+  $('#cHalo').addEventListener('change',e=>showHalo=e.target.checked);
+  $('#cGrid').addEventListener('change',e=>showGrid=e.target.checked);
+
+  // 模式按鈕
+  document.querySelectorAll('.mode-btn').forEach(b=>{
+    b.addEventListener('click',()=>{ setMode(b.dataset.mode); });
+  });
+
+  /* 滑鼠拖曳元件 */
+  function toLogical(e){
+    const r=canvas.getBoundingClientRect();
+    return {x:(e.clientX-r.left)/r.width*LOGICAL, y:(e.clientY-r.top)/r.height*LOGICAL};
+  }
+  function pickNode(p){
+    for(let i=NODES.length-1;i>=0;i--){
+      const r=nodeRect(NODES[i]);
+      if(p.x>=r.x0&&p.x<=r.x1&&p.y>=r.y0&&p.y<=r.y1) return i;
+    }
+    return -1;
+  }
+  canvas.addEventListener('pointerdown',e=>{
+    const p=toLogical(e), i=pickNode(p);
+    if(i>=0){ dragNode=i; hoverNode=i; canvas.setPointerCapture(e.pointerId); }
+  });
+  canvas.addEventListener('pointermove',e=>{
+    const p=toLogical(e);
+    if(dragNode>=0){
+      const n=NODES[dragNode];
+      n.x=clamp(p.x,CORE.x0+n.w/2,CORE.x1-n.w/2);
+      n.y=clamp(p.y,CORE.y0+n.h/2,CORE.y1-n.h/2);
+      CACHE=null;
+    }else{
+      hoverNode=pickNode(p);
+      canvas.style.cursor=hoverNode>=0?'grab':'crosshair';
+    }
+  });
+  canvas.addEventListener('pointerup',e=>{ dragNode=-1; });
+  canvas.addEventListener('pointerleave',()=>{ if(dragNode<0) hoverNode=-1; });
+
+  /* ------------------------------------------------------------------ *
+   * 13. 主迴圈
+   * ------------------------------------------------------------------ */
+  let frame=0;
+  function loop(){
+    frame++;
+    if(running){
+      if(mode==='A')      stepGreedy();
+      else if(mode==='B'){ for(let k=0;k<10;k++) stepSA(); iter++; }  // 每幀多嘗試幾次，SA 才有速度
+      else                stepAnalytical(), iter++;
+      if(mode==='B') temperature=Math.max(T_END,T_START*Math.pow(T_END/T_START,Math.min(1,iter/TEMP_ITERS)));
+    }
+    if(frame%4===0){
+      computeMetrics();
+      updateHUD();
+      if(frame%24===0){ pushHistory(); drawChart(); }
+    }
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize',()=>{ resizeCanvas(); drawChart(); });
+
+  /* ------------------------------------------------------------------ *
+   * 14. 啟動
+   * ------------------------------------------------------------------ */
+  buildNetlist(20261029);
+  resizeCanvas();
+  computeMetrics();
+  updateHUD();
+  setMode('B');
+  window.__icons();
+  requestAnimationFrame(loop);
+
+  // 延遲再跑一次圖示（確保 DOM 完整後正確渲染）
+  setTimeout(()=>window.__icons(),300);
+
+  /* ------------------------------------------------------------------ *
+   * 15. Console 實驗 API（課堂演示用）
+   *     在瀏覽器主控台可直接呼叫，例如：
+   *       EDA.setMode('C'); EDA.setWeights(1,1,1.5); EDA.run(500); EDA.metrics
+   * ------------------------------------------------------------------ */
+  window.EDA={
+    get nodes(){return NODES}, get nets(){return NETS}, get pads(){return PADS},
+    get metrics(){return M}, get mode(){return mode}, get iter(){return iter},
+    get temperature(){return temperature},
+    setMode, step:doStep, computeMetrics, legalize,
+    buildNetlist:(s)=>buildNetlist(s??Math.floor(Math.random()*1e9)),
+    setWeights:(a,b,g)=>{alpha=a;beta=b;gamma=g;},
+    run:(n)=>{ for(let i=0;i<n;i++){ doStep(); } computeMetrics(); updateHUD(); return M; }
+  };
+})();
+</script>
+</body>
+</html>
