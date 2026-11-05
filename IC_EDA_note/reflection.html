@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IC EDA 深度架構反思與心得報告 · 從 Nand2Tetris 邏輯化簡到實體佈局大局觀</title>
+
+<!-- ===== 外部資源：Tailwind CSS CDN / Lucide Icons ===== -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<style>
+  :root{
+    --c-cyan:#22d3ee; --c-violet:#a78bfa; --c-amber:#fbbf24;
+    --c-lime:#a3e635;  --c-rose:#fb7185; --c-sky:#38bdf8;
+    --bg-0:#05080f; --bg-1:#0b1220;
+  }
+  html{scroll-behavior:smooth;}
+  body{
+    background:
+      radial-gradient(ellipse 80% 50% at 10% -10%, rgba(34,211,238,.13), transparent 60%),
+      radial-gradient(ellipse 70% 45% at 95% 5%, rgba(167,139,250,.12), transparent 60%),
+      var(--bg-0);
+    color:#cbd5e1;
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",
+                ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  /* 卡片 / 邊框 / 光暈 */
+  .card{
+    background:linear-gradient(160deg,rgba(15,23,42,.92),rgba(2,6,23,.92));
+    border:1px solid rgba(51,65,85,.75);
+    border-radius:14px;
+    box-shadow:0 18px 40px -28px rgba(0,0,0,.9);
+    transition:border-color .25s, box-shadow .25s, transform .25s;
+  }
+  .card-hover:hover{
+    border-color:rgba(34,211,238,.45);
+    box-shadow:0 0 0 1px rgba(34,211,238,.10), 0 22px 48px -26px rgba(34,211,238,.55);
+    transform:translateY(-2px);
+  }
+  .neon-cyan{color:var(--c-cyan); text-shadow:0 0 18px rgba(34,211,238,.45);}
+  .neon-violet{color:var(--c-violet); text-shadow:0 0 18px rgba(167,139,250,.40);}
+  .neon-amber{color:var(--c-amber); text-shadow:0 0 18px rgba(251,191,36,.40);}
+  .neon-lime{color:var(--c-lime); text-shadow:0 0 18px rgba(163,230,53,.35);}
+  .neon-rose{color:var(--c-rose); text-shadow:0 0 18px rgba(251,113,133,.35);}
+  .live-dot{
+    width:8px;height:8px;border-radius:999px;background:var(--c-lime);
+    box-shadow:0 0 10px var(--c-lime); animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+  .codeblock{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    background:rgba(2,6,23,.85); border:1px solid rgba(51,65,85,.75);
+    border-radius:12px; letter-spacing:.2px;
+  }
+  .tag{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid rgba(100,116,139,.55);color:#94a3b8}
+  .metric-val{font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .nav-btn{
+    display:inline-flex;align-items:center;gap:.4rem;
+    font-size:12px;padding:.34rem .7rem;border-radius:.6rem;
+    border:1px solid rgba(71,85,105,.75); background:rgba(15,23,42,.6);
+    color:#94a3b8; white-space:nowrap;
+    transition:border-color .2s, color .2s, background .2s;
+  }
+  .nav-btn:hover{ border-color:rgba(34,211,238,.55); color:#67e8f9; background:rgba(34,211,238,.08); }
+  .nav-btn-active{
+    border-color:rgba(34,211,238,.7); color:#67e8f9;
+    background:linear-gradient(160deg,rgba(34,211,238,.16),rgba(167,139,250,.10));
+    box-shadow:0 0 0 1px rgba(34,211,238,.14), 0 10px 26px -18px rgba(34,211,238,.9);
+  }
+  table.grid-tbl th{font-weight:600;color:#94a3b8;text-align:left;}
+  table.grid-tbl td,table.grid-tbl th{border-bottom:1px dashed rgba(71,85,105,.45);padding:.5rem .6rem;vertical-align:top;}
+  table.grid-tbl tr:hover td{background:rgba(34,211,238,.045);}
+  table.grid-tbl tr.hl td{background:rgba(34,211,238,.07);}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:#05080f}
+  ::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px;border:2px solid #05080f}
+  ::-webkit-scrollbar-thumb:hover{background:#334155}
+  .fade-in{animation:fade .45s ease both}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  /* 章節標題 */
+  .ch-anchor{scroll-margin-top:78px;}
+  /* 互動式流程階段 */
+  .flow-stage{
+    border:1px solid rgba(71,85,105,.7); background:rgba(2,6,23,.55);
+    border-radius:12px; cursor:pointer; transition:all .22s; text-align:left; width:100%;
+  }
+  .flow-stage:hover{ border-color:rgba(148,163,184,.6); }
+  .flow-stage.active{
+    border-color:rgba(34,211,238,.75);
+    background:linear-gradient(160deg,rgba(34,211,238,.14),rgba(167,139,250,.07));
+    box-shadow:0 0 0 1px rgba(34,211,238,.14), 0 16px 36px -24px rgba(34,211,238,.75);
+  }
+  .flow-stage.active .fs-no{ color:#67e8f9; }
+  /* 陷阱對照卡 */
+  .trap-card{
+    background:linear-gradient(165deg,rgba(15,23,42,.95),rgba(2,6,23,.95));
+    border:1px solid rgba(51,65,85,.8); border-radius:16px; overflow:hidden;
+  }
+  .trap-card:hover{ border-color:rgba(251,113,133,.45); }
+  .trap-head{ border-bottom:1px solid rgba(51,65,85,.7); }
+  .split{
+    display:grid; grid-template-columns:1fr; gap:0;
+  }
+  @media(min-width:900px){ .split{ grid-template-columns:1fr 1fr; } }
+  .split > div{ padding:1rem 1.1rem; }
+  @media(min-width:900px){
+    .split > div:first-child{ border-right:1px solid rgba(51,65,85,.6); }
+  }
+  .versus{
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:11px; letter-spacing:.22em; color:#64748b;
+  }
+  /* 條形圖 */
+  .bar-track{ height:8px; border-radius:999px; background:rgba(30,41,59,.85); overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:999px; }
+  .kpi-num{ font-family:ui-monospace,Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ======================= 頂部導覽 NAVBAR ======================= -->
+<nav class="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md">
+  <div class="mx-auto max-w-[1600px] px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5 text-[12.5px] text-slate-400 min-w-0">
+      <i data-lucide="circuit-board" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+      <span class="font-semibold text-slate-200 whitespace-nowrap">IC EDA 學習筆記</span>
+      <span class="hidden sm:inline text-slate-700">|</span>
+      <span class="hidden sm:inline truncate">計算機結構 · 115 學年上學期</span>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="index.html" class="nav-btn" title="回到演算法動態沙盒">
+        <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i><span>📊 演算法動態沙盒</span>
+      </a>
+      <a href="reflection.html" class="nav-btn nav-btn-active" title="深度架構反思與心得報告">
+        <i data-lucide="book-open-text" class="w-3.5 h-3.5"></i><span>📝 深度架構反思與心得報告</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ======================= HERO ======================= -->
+<header class="relative overflow-hidden border-b border-slate-800/80">
+  <div class="mx-auto max-w-[1600px] px-5 py-10">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <span class="inline-flex items-center gap-2 text-[11px] tracking-[.18em] text-amber-300/90 border border-amber-400/30 bg-amber-400/5 rounded-full px-3 py-1">
+        <span class="live-dot" style="background:var(--c-amber);box-shadow:0 0 10px var(--c-amber)"></span> FIELD REPORT · 課堂實測數據
+      </span>
+      <span class="tag">AIG · DFG · Netlist → Placement</span>
+      <span class="tag">Heavy-Edge Matching · Soft Clusters</span>
+      <span class="tag">RUDY · HPWL · Routability</span>
+    </div>
+
+    <div class="flex flex-wrap items-end justify-between gap-6">
+      <div class="max-w-3xl">
+        <h1 class="text-3xl md:text-[40px] font-bold leading-tight text-slate-50">
+          從 <span class="neon-violet">Nand2Tetris 邏輯化簡</span>到<br class="md:hidden"/>
+          <span class="neon-cyan">實體佈局大局觀</span>的思維脈絡
+        </h1>
+        <p class="mt-4 text-slate-400 text-[15px] leading-7">
+          這份報告不是「我學了什麼」的清單，而是把課堂上那套自製 EDA 系統
+          <b class="text-slate-200">逆向拆解</b>之後，再用第一性原理（First Principles）重建一次：
+          老師的每一步為什麼是對的、哪一步在物理上其實是錯的，
+          以及我提出的 <b class="text-cyan-300">「99% 群組公式解 + 1% 突變開口」</b>架構推進。
+          文中<b class="text-slate-200">所有數據都來自沙盒的實際跑測</b>（seed 20261029 / 3,000 次迭代 / 10 網表統計），
+          不是示意圖、不是估計值。
+        </p>
+      </div>
+      <nav class="flex flex-wrap gap-2 text-sm">
+        <a href="#ch1" class="px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/60 hover:border-violet-400/60 hover:text-violet-300 transition">① 逆向剖析</a>
+        <a href="#ch2" class="px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/60 hover:border-rose-400/60 hover:text-rose-300 transition">② 三大陷阱</a>
+        <a href="#ch3" class="px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/60 hover:border-cyan-400/60 hover:text-cyan-300 transition">③ 架構推進</a>
+        <a href="#ch4" class="px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/60 hover:border-lime-400/60 hover:text-lime-300 transition">④ 實測數據</a>
+      </nav>
+    </div>
+
+    <!-- TL;DR KPI -->
+    <div class="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="card p-4">
+        <div class="text-[10.5px] tracking-widest text-slate-500 mb-1.5">收斂加速</div>
+        <div class="kpi-num text-2xl neon-cyan">3.9<span class="text-base">×</span></div>
+        <div class="text-[11px] text-slate-400 mt-1 leading-5">B-2 群組化退火的收斂步數 vs B-1 散裝退火（10 網表平均）</div>
+      </div>
+      <div class="card p-4">
+        <div class="text-[10.5px] tracking-widest text-slate-500 mb-1.5">可布線性提升</div>
+        <div class="kpi-num text-2xl neon-lime">+13.3<span class="text-base">pt</span></div>
+        <div class="text-[11px] text-slate-400 mt-1 leading-5">B-2 (γ=0.8) 的 Routability 相對 B-1 的平均增幅</div>
+      </div>
+      <div class="card p-4">
+        <div class="text-[10.5px] tracking-widest text-slate-500 mb-1.5">搜尋空間壓縮</div>
+        <div class="kpi-num text-2xl neon-violet">35! → 7!</div>
+        <div class="text-[11px] text-slate-400 mt-1 leading-5">從「35 個 cell 的排列」降維成「7 個群組的排列」</div>
+      </div>
+      <div class="card p-4">
+        <div class="text-[10.5px] tracking-widest text-slate-500 mb-1.5">華容道反證</div>
+        <div class="kpi-num text-2xl neon-rose">9.0%</div>
+        <div class="text-[11px] text-slate-400 mt-1 leading-5">群組化但沒有 γ 懲罰時的 Routability —— 線最短卻不能布線</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-[1600px] px-5 py-10 space-y-14">
+
+<!-- ======================= 摘要 ======================= -->
+<section class="card p-6 md:p-8">
+  <div class="flex items-center gap-3 mb-5">
+    <i data-lucide="quote" class="w-6 h-6 text-cyan-400"></i>
+    <h2 class="text-2xl font-bold text-slate-100">摘要：三句話講完這份報告</h2>
+  </div>
+  <ol class="space-y-4 text-[14px] leading-7 text-slate-300">
+    <li class="flex gap-3">
+      <span class="shrink-0 w-6 h-6 rounded-full bg-cyan-400/15 border border-cyan-400/40 text-cyan-300 text-[12px] flex items-center justify-center font-bold">1</span>
+      <span><b class="text-slate-100">老師的系統在邏輯上是对的。</b>
+      把邏輯降階成統一的 NAND、再做 NOT-NOT 抵銷，這正是現代工業級综合器
+      <b class="text-violet-300">Canonical Lowering + Peephole Optimization</b> 的教科書做法；
+      規格統一還讓退火的幾何代價變成 <b class="text-cyan-300">O(1) 零重疊</b>，這是教學系統最聰明的地方。</span>
+    </li>
+    <li class="flex gap-3">
+      <span class="shrink-0 w-6 h-6 rounded-full bg-rose-400/15 border border-rose-400/40 text-rose-300 text-[12px] flex items-center justify-center font-bold">2</span>
+      <span><b class="text-slate-100">但邏輯最簡 ≠ 最好布線。</b>
+      拆得越碎，內部短連線就越全部外溢成跨晶片的長線，RUDY 需求暴增、通道塞死；
+      而「前端砍掉的雙重反相器」，常常正是後端在長線上救時序的救命稻草。
+      這三個陷阱我用<b class="text-rose-300">邏輯視圖 vs 物理視圖</b>的對照卡逐一刻畫。</span>
+    </li>
+    <li class="flex gap-3">
+      <span class="shrink-0 w-6 h-6 rounded-full bg-lime-400/15 border border-lime-400/40 text-lime-300 text-[12px] flex items-center justify-center font-bold">3</span>
+      <span><b class="text-slate-100">我的推進：99% 群組公式解 + 1% 突變開口。</b>
+      先依連通度打包成軟群組（保護局部定石）、高溫以整包為單位換大局、低溫解束縛微調、
+      永遠保留 1% 破格突變；並且把 <b class="text-amber-300">γ 擁塞懲罰放進接受準則</b>。
+      實測：收斂快 <b class="text-cyan-300">3.9×</b>、Routability <b class="text-lime-300">+13.3pt</b>，
+      而且 γ 拉成一個真正連續可調的 Pareto 旋鈕。</span>
+    </li>
+  </ol>
+</section>
+
+<!-- ======================= 第一章 ======================= -->
+<section id="ch1" class="ch-anchor space-y-6">
+  <div class="flex items-center gap-3">
+    <i data-lucide="unfold-vertical" class="w-7 h-7 text-violet-400"></i>
+    <div>
+      <div class="text-[11px] tracking-[.2em] text-slate-500">CHAPTER 01</div>
+      <h2 class="text-2xl font-bold text-slate-100">對課堂自製 EDA 系統的逆向剖析</h2>
+    </div>
+  </div>
+
+  <!-- 1.1 觀察現象 -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">1.1　觀察現象：老師的系統實際上在做什麼</h3>
+    <p class="text-[13.5px] leading-7 text-slate-400 mb-6">
+      把課堂流程反覆看過幾遍之後，我畫出下面這條路徑。它看起來像「教學玩具」，
+      但每一個步驟背後都對應著一個真實的工業技術：
+    </p>
+
+    <div class="codeblock p-4 md:p-6 text-[12px] md:text-[13.5px] leading-8 overflow-x-auto">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="px-3 py-2 rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-300 whitespace-nowrap">Nand2Tetris 邏輯拆解</div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600"></i>
+        <div class="px-3 py-2 rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-300 whitespace-nowrap">降階為基礎 NAND</div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600"></i>
+        <div class="px-3 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-300 whitespace-nowrap">NOT-NOT 抵銷（首批簡化）</div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600"></i>
+        <div class="px-3 py-2 rounded-lg border border-amber-400/40 bg-amber-400/10 text-amber-300 whitespace-nowrap">模擬退火（退熱）</div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600"></i>
+        <div class="px-3 py-2 rounded-lg border border-rose-400/40 bg-rose-400/10 text-rose-300 whitespace-nowrap">布線</div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid md:grid-cols-3 gap-4">
+      <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+        <b class="text-[13px] text-violet-300">「降階」這件事</b>
+        <p class="text-[12.5px] leading-6 text-slate-400 mt-1.5">
+          不是為了簡單而簡單。降階的目的，是讓<b class="text-slate-200">所有節點的幾何與電氣規格完全統一</b>，
+          讓後續的佈局階段不再需要處理「不同邏輯深度、不同形狀」的元件。
+        </p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+        <b class="text-[13px] text-cyan-300">「NOT-NOT 抵銷」這件事</b>
+        <p class="text-[12.5px] leading-6 text-slate-400 mt-1.5">
+          布林代數上 <span class="font-mono text-cyan-300">¬(¬A) = A</span> 必須消除，因為它是純冗餘。
+          它是整條流程裡<b class="text-slate-200">最便宜的一次最佳化</b>（O(1) 判斷、O(1) 刪除、面積直接省下兩顆 gate）。
+        </p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+        <b class="text-[13px] text-amber-300">「直接進入退火」這件事</b>
+        <p class="text-[12.5px] leading-6 text-slate-400 mt-1.5">
+          這是<b class="text-slate-200">整個系統最關鍵的假設</b>：退火被當成唯一的佈局引擎。
+          這個假設在教學上成立，但它同時也埋下了第二章要講的三個陷阱。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.2 AIG -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">1.2　First Principles #1：這就是現代工業級的 AIG 正規化降階</h3>
+    <p class="text-[13.5px] leading-7 text-slate-400 mb-5">
+      我把「降階成基礎閘」這件事拿去對照 Berkeley ABC / Yosys 的原始碼與論文，
+      發現老師的做法幾乎就是教科書 Canonical Form 的手動實作：
+    </p>
+
+    <div class="codeblock p-4 md:p-5 text-[12.5px] md:text-[14px] leading-8 overflow-x-auto mb-5">
+      <div class="text-slate-500 text-[11px] tracking-widest mb-2">CANONICAL FORM · AIG</div>
+      <div class="font-semibold text-slate-100">
+        AIG = <span class="neon-violet">And</span>-Inverter Graph
+      </div>
+      <div class="mt-3 grid sm:grid-cols-2 gap-3 text-[12px] leading-6">
+        <div class="border-l-2 border-violet-400/70 pl-3">
+          <div class="text-violet-300 font-semibold">結構保證</div>
+          <div class="text-slate-400">節點只有 AND 與反相器兩種；<br/>節點數 ≈ 面積，圖深度 ≈ 延遲。</div>
+        </div>
+        <div class="border-l-2 border-violet-400/70 pl-3">
+          <div class="text-violet-300 font-semibold">正規化保證</div>
+          <div class="text-slate-400">同一個 Boolean 函數只對應<b>唯一</b>的 AIG；<br/>因此「比對」與「最佳化」都變成圖操作。</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="grid-tbl w-full text-[12.5px] leading-6">
+      <thead><tr><th class="w-[26%]">課堂自製系統的做法</th><th class="w-[30%]">現代綜合器的對應技術</th><th>為什麼等價</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="text-violet-300">用 Nand2Tetris 把複雜邏輯拆成純 NAND</td>
+          <td class="text-cyan-300"><b>Canonical Lowering</b><br/><span class="text-slate-500">ABC: <code class="text-[11.5px]">strash</code> + <code class="text-[11.5px]">resyn</code></span></td>
+          <td class="text-slate-400">把任意邏輯降階到單一規範形式，好讓後續最佳化有固定的搜尋空間。ABC 的 <code class="text-[11.5px]">strash</code> 就是結構雜湊（把相同結構合併），與「相同 sub-expression 只算一次」同義。</td>
+        </tr>
+        <tr>
+          <td class="text-violet-300">NOT-NOT 抵銷</td>
+          <td class="text-cyan-300"><b>Peephole / Local Rewriting</b><br/><span class="text-slate-500">Yosys: <code class="text-[11.5px]">opt_clean</code></span></td>
+          <td class="text-slate-400">在固定的小視窗（peephole）內窮舉等價替換並取面積最小者。雙重反相器是這個視窗裡最基本的一條規則。</td>
+        </tr>
+        <tr>
+          <td class="text-violet-300">降階後才送進佈局</td>
+          <td class="text-cyan-300"><b>Tech Mapping / Liberty</b></td>
+          <td class="text-slate-400">邏輯網與實體 cell 庫分離；佈局看到的是「面積、寬度、pin 位置」三個屬性，與邏輯功能無關 —— 這正是我們後面要用的抽象。</td>
+        </tr>
+        <tr>
+          <td class="text-violet-300">退火做座標交換</td>
+          <td class="text-cyan-300"><b>Simulated Annealing Placement</b><br/><span class="text-slate-500">1990s 工業界標準</span></td>
+          <td class="text-slate-400">離散排列問題，用「交換 + Metropolis 接受準則」求解；到 ePlace / DREAMPlace 出現前，這是量產工具的主力。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="mt-5 rounded-xl border border-cyan-400/25 bg-cyan-400/[.05] p-4 md:p-5">
+      <b class="text-[13px] text-cyan-300">我的判斷</b>
+      <p class="text-[13px] leading-7 text-slate-300 mt-1.5">
+        這條鏈路<b class="text-slate-100">完全沒有因為是教學系統而偷工減料</b>。
+        它是 1990–2010 年代真實 EDA 工具的核心路徑，只是把複雜度壓到最小、讓每一步都能被眼睛驗證。
+        老師把「綜合器」與「佈局器」的接縫直接攤開給學生看 —— 這比只教工具操作要有價值得多。
+      </p>
+    </div>
+  </div>
+
+  <!-- 1.3 Occam's Razor -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">1.3　First Principles #2：為什麼「規格統一」是整件事最聰明的一刀（Occam's Razor）</h3>
+    <p class="text-[13.5px] leading-7 text-slate-400 mb-5">
+      這是我從老師的系統裡學到最實用的一件事，而且它不是「教學妥協」，而是<b class="text-slate-200">刻意的工程選擇</b>：
+    </p>
+
+    <div class="grid lg:grid-cols-2 gap-5">
+      <div class="codeblock p-4 md:p-5 text-[12.5px] leading-7">
+        <div class="text-slate-500 text-[11px] tracking-widest mb-2">幾何代價 · 交換前後</div>
+        <div class="text-slate-300">
+          交換 A、B 兩個 cell 的位置時，與其它 cell 的重疊增量為
+        </div>
+        <div class="mt-3 text-center font-mono text-[14px] text-cyan-300">
+          ΔOverlap = O(1)
+        </div>
+        <div class="mt-3 text-[12px] leading-6 text-slate-400">
+          因為每個 cell 的 <span class="text-slate-200">w × h 完全相同</span>，
+          交換兩者只是把同一塊矩形搬到別處，體積不變 → 淨新增重疊面積為 0。
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800 text-[12px] leading-6 text-slate-400">
+          若規格<b class="text-rose-300">不統一</b>（不同寬高的標準 cell），
+          交換就會產生 <span class="font-mono">ΔOverlap ≠ 0</span>，
+          必須在每次試探時做一次 O(N) 的重疊檢查 → 退火核心迴圈複雜度從 O(1) 退化。
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-[14px] font-semibold text-slate-100 mb-3">這個選擇換來的四個好處</h4>
+        <ul class="space-y-2.5 text-[13px] leading-7 text-slate-300">
+          <li class="flex gap-2.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-lime-400 mt-1 shrink-0"></i><span><b class="text-slate-100">退火內迴圈極簡</b>：只需要算線長與 pin 位置，不必處理形狀碰撞。</span></li>
+          <li class="flex gap-2.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-lime-400 mt-1 shrink-0"></i><span><b class="text-slate-100">結果可逐格驗證</b>：學生能用眼睛看出版圖，錯在哪一目了然。</span></li>
+          <li class="flex gap-2.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-lime-400 mt-1 shrink-0"></i><span><b class="text-slate-100">複雜度集中在可控處</b>：所有難題被推遲到「佈局 + 布線」這一段。</span></li>
+          <li class="flex gap-2.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-lime-400 mt-1 shrink-0"></i><span><b class="text-slate-100">對應真實的多層次抽象</b>：真實流程裡「cell 規格統一」是 STA / DFT / P&amp;R 全部能並行的前提。</span></li>
+        </ul>
+        <div class="mt-4 rounded-xl border border-amber-400/25 bg-amber-400/[.05] p-4">
+          <b class="text-[13px] text-amber-300">但這把雙刃劍，也是陷阱的來源</b>
+          <p class="text-[12.5px] leading-6 text-slate-300 mt-1.5">
+            規格統一讓「邏輯單位」與「物理單位」完全脫鉤：程式裡的 XOR 已經是 4 顆一模一樣的 NAND，
+            你再也看不出它們<b class="text-slate-200">本來是一個功能模組</b>。
+            這正是第二章第一個陷阱的根源。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 第二章 ======================= -->
+<section id="ch2" class="ch-anchor space-y-6">
+  <div class="flex items-center gap-3">
+    <i data-lucide="triangle-alert" class="w-7 h-7 text-rose-400"></i>
+    <div>
+      <div class="text-[11px] tracking-[.2em] text-slate-500">CHAPTER 02</div>
+      <h2 class="text-2xl font-bold text-slate-100">前後端耦合的三大物理認知陷阱</h2>
+    </div>
+  </div>
+
+  <p class="text-[14px] leading-7 text-slate-400 max-w-4xl">
+    邏輯綜合的目標函數是 <b class="text-slate-200">面積 / 延遲 / 邏輯深度</b>；
+    物理佈局的目標函數是 <b class="text-slate-200">線長 / 密度 / 擁塞 / 可布線性</b>。
+    兩者之間<b class="text-rose-300">沒有單調的映射關係</b> —— 前端做的每一步「最佳化」，都可能在後端造成更壞的結果。
+    以下三張對照卡，是我從老師系統的實作與沙盒實測中整理出來的具體矛盾。
+  </p>
+
+  <!-- 陷阱 1 -->
+  <div class="trap-card">
+    <div class="trap-head p-5 md:p-6 flex items-start gap-4">
+      <span class="shrink-0 w-9 h-9 rounded-lg bg-rose-500/15 border border-rose-400/40 text-rose-300 flex items-center justify-center font-bold">01</span>
+      <div>
+        <h3 class="text-[16px] font-bold text-slate-100">顆粒度與擁塞爆炸陷阱</h3>
+        <div class="text-[12px] text-slate-500 mt-0.5">Granularity vs. RUDY Congestion</div>
+      </div>
+    </div>
+    <div class="p-5 md:p-6">
+      <p class="text-[13.5px] leading-7 text-slate-300 mb-5">
+        若把一個複合邏輯（XOR、Adder）徹底拆碎成散裝 NAND 卻<b class="text-slate-200">不重新打包</b>，
+        原本藏在元件<b class="text-cyan-300">內部（1 樓地基）</b>的短連線，
+        就會全部外溢成為晶片<b class="text-rose-300">全域走線（2~10 樓金屬線）</b>。
+        這不是比喻 —— 在我們的 RUDY 模型裡它有精確的數學後果：
+      </p>
+
+      <div class="codeblock p-4 md:p-5 text-[12px] md:text-[13.5px] leading-8 overflow-x-auto mb-5">
+        <div class="text-slate-500 text-[11px] tracking-widest mb-2">RUDY 需求模型</div>
+        <div class="font-mono text-[13px]">
+          RUDY(G) = Σ<sub>nets</sub> [ pins(G) + L<sub>net</sub> · A(G ∩ bbox<sub>net</sub>) / A(bbox<sub>net</sub>) ]
+        </div>
+        <div class="mt-3 text-[12.5px] leading-6 text-slate-400">
+          拆散一個模組 → <span class="text-rose-300">L<sub>net</sub> 變長</span>（原本 30px 的線變成 400px）
+          且 <span class="text-rose-300">bbox 變大</span> → 同一個 bin 要分攤的走線需求暴增
+          → 通道容量 <span class="font-mono">c(G) = RUDY(G)/(K·RUDȲ·FreeArea(G))</span> 爆表 → 無法布線。
+        </div>
+      </div>
+
+      <div class="split border border-slate-800 rounded-xl overflow-hidden">
+        <div class="bg-slate-950/40">
+          <div class="text-[11px] tracking-widest text-cyan-300 mb-3">邏輯視圖（前端眼中）</div>
+          <svg viewBox="0 0 320 170" class="w-full h-auto">
+            <rect x="58" y="40" width="204" height="90" rx="10" fill="rgba(34,211,238,.07)" stroke="rgba(34,211,238,.45)" stroke-dasharray="5 4"/>
+            <text x="160" y="30" fill="#67e8f9" font-size="10" text-anchor="middle" font-family="monospace">XOR MODULE (4 × NAND)</text>
+            <g font-family="monospace" font-size="9" text-anchor="middle">
+              <rect x="72" y="58" width="42" height="24" rx="4" fill="#0e7490" stroke="#22d3ee"/><text x="93" y="74" fill="#e0f2fe">NAND</text>
+              <rect x="124" y="58" width="42" height="24" rx="4" fill="#0e7490" stroke="#22d3ee"/><text x="145" y="74" fill="#e0f2fe">NAND</text>
+              <rect x="176" y="58" width="42" height="24" rx="4" fill="#0e7490" stroke="#22d3ee"/><text x="197" y="74" fill="#e0f2fe">NAND</text>
+              <rect x="206" y="98" width="42" height="24" rx="4" fill="#0e7490" stroke="#22d3ee"/><text x="227" y="114" fill="#e0f2fe">NAND</text>
+            </g>
+            <path d="M114 70 L124 70 M166 70 L176 70 M197 82 L227 98" stroke="#22d3ee" stroke-width="1.4" fill="none" opacity=".85"/>
+            <text x="160" y="152" fill="#94a3b8" font-size="10" text-anchor="middle">內部連線短 → 成本低、需求集中</text>
+          </svg>
+        </div>
+        <div class="bg-rose-950/10">
+          <div class="text-[11px] tracking-widest text-rose-300 mb-3">物理視圖（後端眼中）</div>
+          <svg viewBox="0 0 320 170" class="w-full h-auto">
+            <g font-family="monospace" font-size="9" text-anchor="middle">
+              <rect x="18" y="22" width="38" height="22" rx="4" fill="#7f1d1d" stroke="#fb7185"/><text x="37" y="37" fill="#ffe4e6">NAND</text>
+              <rect x="262" y="30" width="38" height="22" rx="4" fill="#7f1d1d" stroke="#fb7185"/><text x="281" y="45" fill="#ffe4e6">NAND</text>
+              <rect x="140" y="72" width="38" height="22" rx="4" fill="#7f1d1d" stroke="#fb7185"/><text x="159" y="87" fill="#ffe4e6">NAND</text>
+              <rect x="26" y="124" width="38" height="22" rx="4" fill="#7f1d1d" stroke="#fb7185"/><text x="45" y="139" fill="#ffe4e6">NAND</text>
+              <rect x="258" y="120" width="38" height="22" rx="4" fill="#7f1d1d" stroke="#fb7185"/><text x="277" y="135" fill="#ffe4e6">NAND</text>
+            </g>
+            <path d="M56 33 L262 41 M159 83 L281 41 M159 83 L277 131 M159 83 L45 135 M159 83 L37 44" stroke="#fb7185" stroke-width="1.3" fill="none" opacity=".9"/>
+            <path d="M56 33 L277 131" stroke="#fb7185" stroke-width="1.3" fill="none" opacity=".55"/>
+            <text x="160" y="163" fill="#fda4af" font-size="10" text-anchor="middle">長線外溢 → RUDY 需求暴增、通道塞死</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-3 text-[11px] text-slate-500">
+        <span class="versus">LOGIC ⟷ PHYSICAL</span><span class="h-px flex-1 bg-slate-800"></span>
+      </div>
+      <p class="text-[13px] leading-7 text-slate-300 mt-3">
+        <b class="text-slate-100">沙盒實證：</b>同樣的群組化演算法，只把「γ 擁塞懲罰」關掉，
+        HPWL 會從 <b class="text-lime-300">11,181</b> 掉到 <b class="text-lime-300">9,017</b>（−19.4%，線更短），
+        但 Routability 從 <b class="text-lime-300">47.9%</b> 崩到 <b class="text-rose-300">9.0%</b>、
+        重疊率從 0.45% 升到 3.71%、最差通道 c<sub>max</sub> 從 2.78 飆到 <b class="text-rose-300">8.12</b>。
+        <b class="text-amber-300">這就是「線最短卻整體無解」的完整數字版本。</b>
+      </p>
+    </div>
+  </div>
+
+  <!-- 陷阱 2 -->
+  <div class="trap-card">
+    <div class="trap-head p-5 md:p-6 flex items-start gap-4">
+      <span class="shrink-0 w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-400/40 text-amber-300 flex items-center justify-center font-bold">02</span>
+      <div>
+        <h3 class="text-[16px] font-bold text-slate-100">「廢話邏輯」的物理救贖</h3>
+        <div class="text-[12px] text-slate-500 mt-0.5">NOT-NOT Elimination vs. Buffer Insertion</div>
+      </div>
+    </div>
+    <div class="p-5 md:p-6">
+      <p class="text-[13.5px] leading-7 text-slate-300 mb-5">
+        布林代數上 <span class="font-mono text-cyan-300">¬(¬A) = A</span> 是必須消除的冗餘，
+        老師的系統把這件事做得很乾淨。但在真實後端，故事會反轉：
+      </p>
+
+      <div class="codeblock p-4 md:p-5 text-[12px] md:text-[13.5px] leading-8 overflow-x-auto mb-5">
+        <div class="text-slate-500 text-[11px] tracking-widest mb-2">長線的 RC 延遲</div>
+        <div class="font-mono text-[13px]">
+          t<sub>wire</sub> ≈ 0.38 · R<sub>wire</sub> · C<sub>wire</sub> · L<sub>wire</sub><sup>2</sup> / 2
+        </div>
+        <div class="mt-3 text-[12.5px] leading-6 text-slate-400">
+          延遲對線長是<b class="text-rose-300">二次方</b>的。當 γ 權重被拉高、為了避開擁塞而把總線長
+          從 <span class="font-mono text-cyan-300">3,974</span> 拉長到 <span class="font-mono text-rose-300">19,165</span>
+          （我們的沙盒實測數字）時，長線的訊號衰減會讓時序直接崩掉。
+          於是後端<b class="text-amber-300">反而必須「故意」在長線上塞回成對的反相器</b>（Buffer Insertion）來重建驅動能力與縮短有效線段。
+        </div>
+      </div>
+
+      <div class="split border border-slate-800 rounded-xl overflow-hidden">
+        <div class="bg-slate-950/40">
+          <div class="text-[11px] tracking-widest text-cyan-300 mb-3">前端視圖：冗餘，砍掉</div>
+          <svg viewBox="0 0 320 150" class="w-full h-auto">
+            <g font-family="monospace" font-size="9" text-anchor="middle">
+              <rect x="18" y="58" width="46" height="26" rx="4" fill="#0e7490" stroke="#22d3ee"/><text x="41" y="75" fill="#e0f2fe">A</text>
+              <rect x="104" y="58" width="46" height="26" rx="4" fill="#7f1d1d" stroke="#fb7185"/><text x="127" y="75" fill="#ffe4e6">NOT</text>
+              <rect x="190" y="58" width="46" height="26" rx="4" fill="#7f1d1d" stroke="#fb7185"/><text x="213" y="75" fill="#ffe4e6">NOT</text>
+              <rect x="262" y="58" width="46" height="26" rx="4" fill="#0e7490" stroke="#22d3ee"/><text x="285" y="75" fill="#e0f2fe">A</text>
+            </g>
+            <path d="M64 71 L104 71 M150 71 L190 71 M236 71 L262 71" stroke="#64748b" stroke-width="1.4"/>
+            <path d="M80 100 L240 100" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="4 3"/>
+            <text x="160" y="118" fill="#fda4af" font-size="10" text-anchor="middle">整對消除 → 面積 −2 cells，延遲 −2 gates</text>
+          </svg>
+        </div>
+        <div class="bg-amber-950/10">
+          <div class="text-[11px] tracking-widest text-amber-300 mb-3">後端視圖：冗餘，救命</div>
+          <svg viewBox="0 0 320 150" class="w-full h-auto">
+            <g font-family="monospace" font-size="9" text-anchor="middle">
+              <rect x="14" y="56" width="44" height="24" rx="4" fill="#78350f" stroke="#fbbf24"/><text x="36" y="72" fill="#fef3c7">drv</text>
+              <rect x="88" y="56" width="44" height="24" rx="4" fill="#78350f" stroke="#fbbf24"/><text x="110" y="72" fill="#fef3c7">buf1</text>
+              <rect x="146" y="56" width="44" height="24" rx="4" fill="#78350f" stroke="#fbbf24"/><text x="168" y="72" fill="#fef3c7">inv</text>
+              <rect x="204" y="56" width="44" height="24" rx="4" fill="#78350f" stroke="#fbbf24"/><text x="226" y="72" fill="#fef3c7">inv</text>
+              <rect x="264" y="56" width="44" height="24" rx="4" fill="#78350f" stroke="#fbbf24"/><text x="286" y="72" fill="#fef3c7">buf2</text>
+            </g>
+            <path d="M58 68 L88 68 M132 68 L146 68 M190 68 L204 68 M248 68 L264 68" stroke="#fbbf24" stroke-width="1.4"/>
+            <path d="M76 104 L252 104" stroke="#22d3ee" stroke-width="1.6"/>
+            <text x="164" y="122" fill="#67e8f9" font-size="10" text-anchor="middle">有效線段縮短 → RC 衰減被切斷</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-3 text-[11px] text-slate-500">
+        <span class="versus">LOGIC ⟷ PHYSICAL</span><span class="h-px flex-1 bg-slate-800"></span>
+      </div>
+      <p class="text-[13px] leading-7 text-slate-300 mt-3">
+        <b class="text-amber-300">結論：</b><b class="text-slate-100">前端拼命砍掉的反反相器，往往是後端拯救時序的救命稻草。</b>
+        這不是說前端不該做 NOT-NOT 抵銷（它仍然該做），
+        而是說：<b class="text-cyan-300">前端與後端之間需要一條「資訊回流」的通道</b>，
+        讓後端的長線壓力可以回頭影響前端的簡化決策。
+        現代 EDA 裡這條通道就是 timing-driven optimization 與 physical-aware synthesis。
+      </p>
+    </div>
+  </div>
+
+  <!-- 陷阱 3 -->
+  <div class="trap-card">
+    <div class="trap-head p-5 md:p-6 flex items-start gap-4">
+      <span class="shrink-0 w-9 h-9 rounded-lg bg-violet-500/15 border border-violet-400/40 text-violet-300 flex items-center justify-center font-bold">03</span>
+      <div>
+        <h3 class="text-[16px] font-bold text-slate-100">搜尋空間維度災難</h3>
+        <div class="text-[12px] text-slate-500 mt-0.5">Curse of Dimensionality in Flat SA</div>
+      </div>
+    </div>
+    <div class="p-5 md:p-6">
+      <p class="text-[13.5px] leading-7 text-slate-300 mb-5">
+        把緊密關聯的邏輯閘拆碎之後直接做<b class="text-slate-200">平坦式退火</b>，
+        高溫期的隨機交換會瞬間<b class="text-rose-300">撕裂原本最佳的局部拓撲（打碎定石）</b>，
+        迫使退火演算法耗費海量迭代去重新拼湊 —— 那些迭代其實是在 undo 自己。
+      </p>
+
+      <div class="grid md:grid-cols-3 gap-3 mb-5">
+        <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-center">
+          <div class="text-[10.5px] tracking-widest text-slate-500 mb-2">散裝退火 B-1</div>
+          <div class="kpi-num text-xl neon-rose">35 !</div>
+          <div class="text-[11px] text-slate-500 mt-1.5 leading-5">≈ 1.04 × 10<sup>40</sup> 種排列</div>
+        </div>
+        <div class="rounded-xl border border-cyan-400/35 bg-cyan-400/[.06] p-4 text-center">
+          <div class="text-[10.5px] tracking-widest text-cyan-300 mb-2">群組化退火 B-2</div>
+          <div class="kpi-num text-xl neon-cyan">7 !</div>
+          <div class="text-[11px] text-slate-400 mt-1.5 leading-5">= 5,040 種群組排列</div>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-center">
+          <div class="text-[10.5px] tracking-widest text-slate-500 mb-2">壓縮倍數</div>
+          <div class="kpi-num text-xl neon-lime">10<sup>36</sup></div>
+          <div class="text-[11px] text-slate-400 mt-1.5 leading-5">搜尋空間被降維一個數量級</div>
+        </div>
+      </div>
+
+      <div class="split border border-slate-800 rounded-xl overflow-hidden">
+        <div class="bg-slate-950/40">
+          <div class="text-[11px] tracking-widest text-violet-300 mb-3">B-1：高溫期把定石打碎</div>
+          <svg viewBox="0 0 320 160" class="w-full h-auto">
+            <g font-family="monospace" font-size="8" text-anchor="middle">
+              <rect x="24" y="30" width="30" height="18" rx="3" fill="#4c1d95" stroke="#a78bfa"/>
+              <rect x="58" y="32" width="30" height="18" rx="3" fill="#4c1d95" stroke="#a78bfa"/>
+              <rect x="92" y="30" width="30" height="18" rx="3" fill="#4c1d95" stroke="#a78bfa"/>
+              <rect x="126" y="32" width="30" height="18" rx="3" fill="#4c1d95" stroke="#a78bfa"/>
+            </g>
+            <path d="M54 39 L58 41 M88 39 L92 39 M122 39 L126 41" stroke="#a78bfa" stroke-width="1.2"/>
+            <text x="90" y="24" fill="#c4b5fd" font-size="9" text-anchor="middle">原本綁在一起的 4 顆</text>
+            <path d="M140 60 L250 118" stroke="#fb7185" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <g font-family="monospace" font-size="8" text-anchor="middle">
+              <rect x="196" y="104" width="30" height="18" rx="3" fill="#7f1d1d" stroke="#fb7185"/>
+              <rect x="248" y="126" width="30" height="18" rx="3" fill="#7f1d1d" stroke="#fb7185"/>
+              <rect x="120" y="122" width="30" height="18" rx="3" fill="#7f1d1d" stroke="#fb7185"/>
+              <rect x="40" y="116" width="30" height="18" rx="3" fill="#7f1d1d" stroke="#fb7185"/>
+            </g>
+            <path d="M226 113 L248 135 M150 131 L196 113 M70 125 L120 131" stroke="#fb7185" stroke-width="1.2" opacity=".8"/>
+            <text x="160" y="156" fill="#fda4af" font-size="10" text-anchor="middle">散落 → 短連線全部升級成長線</text>
+          </svg>
+        </div>
+        <div class="bg-cyan-950/10">
+          <div class="text-[11px] tracking-widest text-cyan-300 mb-3">B-2：整包搬運，保護定石</div>
+          <svg viewBox="0 0 320 160" class="w-full h-auto">
+            <g font-family="monospace" font-size="8" text-anchor="middle">
+              <rect x="24" y="30" width="30" height="18" rx="3" fill="#0e7490" stroke="#22d3ee"/>
+              <rect x="58" y="32" width="30" height="18" rx="3" fill="#0e7490" stroke="#22d3ee"/>
+              <rect x="92" y="30" width="30" height="18" rx="3" fill="#0e7490" stroke="#22d3ee"/>
+              <rect x="126" y="32" width="30" height="18" rx="3" fill="#0e7490" stroke="#22d3ee"/>
+            </g>
+            <path d="M54 39 L58 41 M88 39 L92 39 M122 39 L126 41" stroke="#22d3ee" stroke-width="1.2"/>
+            <path d="M140 58 L238 92" stroke="#a3e635" stroke-width="1.4"/>
+            <g font-family="monospace" font-size="8" text-anchor="middle">
+              <rect x="190" y="80" width="30" height="18" rx="3" fill="#0e7490" stroke="#22d3ee"/>
+              <rect x="224" y="82" width="30" height="18" rx="3" fill="#0e7490" stroke="#22d3ee"/>
+              <rect x="258" y="80" width="30" height="18" rx="3" fill="#0e7490" stroke="#22d3ee"/>
+              <rect x="292" y="82" width="30" height="18" rx="3" fill="#0e7490" stroke="#22d3ee"/>
+            </g>
+            <path d="M220 89 L224 91 M254 89 L258 89 M288 89 L292 91" stroke="#22d3ee" stroke-width="1.2"/>
+            <text x="160" y="130" fill="#bef264" font-size="10" text-anchor="middle">整包平移 → 內部拓撲完全不變</text>
+            <text x="160" y="146" fill="#94a3b8" font-size="9" text-anchor="middle">一次移動 = 跨越大量排列</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-3 text-[11px] text-slate-500">
+        <span class="versus">LOGIC ⟷ PHYSICAL</span><span class="h-px flex-1 bg-slate-800"></span>
+      </div>
+      <p class="text-[13px] leading-7 text-slate-300 mt-3">
+        <b class="text-slate-100">沙盒實證：</b>在完全相同的網表、相同的溫度曲線、相同的目標函式下，
+        B-2 的收斂步數 <b class="text-cyan-300">10/10 個網表全部勝出</b>，
+        平均從 <b>2,095 步</b> 降到 <b>535 步</b>（<b class="text-cyan-300">3.9×</b>）。
+        這個差距<b class="text-slate-200">不是因為 B-2 「算得比較好」，而是因為它「少走冤枉路」</b>。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 第三章 ======================= -->
+<section id="ch3" class="ch-anchor space-y-6">
+  <div class="flex items-center gap-3">
+    <i data-lucide="git-branch" class="w-7 h-7 text-cyan-400"></i>
+    <div>
+      <div class="text-[11px] tracking-[.2em] text-slate-500">CHAPTER 03</div>
+      <h2 class="text-2xl font-bold text-slate-100">我提出的架構推進：「99% 群組公式解 + 1% 突變開口」</h2>
+    </div>
+  </div>
+
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">3.1　核心設計哲學：圍棋的「大局厚勢」 × 演化計算的 Exploitation / Exploration</h3>
+    <div class="grid md:grid-cols-2 gap-5 mt-4">
+      <div class="rounded-xl border border-amber-400/25 bg-amber-400/[.05] p-5">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="circle-dot" class="w-4 h-4 text-amber-300"></i>
+          <b class="text-[13.5px] text-amber-300">圍棋：厚勢</b>
+        </div>
+        <p class="text-[13px] leading-7 text-slate-300">
+          圍棋講究「<b class="text-slate-100">先佔大場，再做小目</b>」。
+          實戰中最常見的敗因不是某一手棋算錯，而是<b class="text-slate-200">整盤棋從來沒有形成「大氣合圍」的勢</b>：
+          每一手都在局部爭地，最後各塊孤立的棋連不起氣來，空氣全被對手佔掉。
+        </p>
+        <p class="text-[12.5px] leading-6 text-slate-400 mt-2">
+          <b class="text-amber-300">對應到演算法：</b>高溫期不要急著優化每一條線，
+          要先把「功能模組」整塊放對位置 —— 這就是群組化 Macro-move 的圍棋味。
+        </p>
+      </div>
+      <div class="rounded-xl border border-violet-400/25 bg-violet-400/[.05] p-5">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="dna" class="w-4 h-4 text-violet-300"></i>
+          <b class="text-[13.5px] text-violet-300">演化計算：Exploitation vs. Exploration</b>
+        </div>
+        <p class="text-[13px] leading-7 text-slate-300">
+          演化演算法只有兩種選擇：<b class="text-slate-100">開發（Exploitation）</b>已知的好解，
+          還是<b class="text-slate-200">探索（Exploration）</b>未知空間。純發會陷入局部極小，
+          純探會浪費所有迭代。
+        </p>
+        <p class="text-[12.5px] leading-6 text-slate-400 mt-2">
+          <b class="text-violet-300">對應到演算法：</b>群組化就是「已知公式解」，
+          1% 突變開口就是「探索」。<b class="text-slate-200">100% 探索會散架，100% 開發會卡死。</b>
+          所以是 99 : 1。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 互動式流程圖 -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">3.2　互動式流程：三個階段（點擊切換）</h3>
+    <p class="text-[13.5px] leading-7 text-slate-400 mb-6">
+      點選任一階段，查看它的<b class="text-slate-200">設計動機、物理公式、以及在沙盒中的實作位置</b>。
+    </p>
+
+    <div class="grid lg:grid-cols-[340px_minmax(0,1fr)] gap-5 items-start">
+      <div class="space-y-3">
+        <button class="flow-stage active p-4" data-stage="0">
+          <div class="flex items-start gap-3">
+            <span class="fs-no font-mono text-[13px] text-slate-400 shrink-0">S1</span>
+            <span class="min-w-0">
+              <span class="block text-[14px] font-bold text-slate-100">99% 公式解</span>
+              <span class="block text-[11.5px] text-slate-400 mt-1 leading-5">連通度群組化 / 工藝映射打包：把高耦合的基礎閘鎖成軟群組</span>
+            </span>
+          </div>
+        </button>
+        <button class="flow-stage p-4" data-stage="1">
+          <div class="flex items-start gap-3">
+            <span class="fs-no font-mono text-[13px] text-slate-400 shrink-0">S2</span>
+            <span class="min-w-0">
+              <span class="block text-[14px] font-bold text-slate-100">大局容錯內化</span>
+              <span class="block text-[11.5px] text-slate-400 mt-1 leading-5">把 γ 擁塞懲罰放進目標函式，佈局期主動預留走線走廊</span>
+            </span>
+          </div>
+        </button>
+        <button class="flow-stage p-4" data-stage="2">
+          <div class="flex items-start gap-3">
+            <span class="fs-no font-mono text-[13px] text-slate-400 shrink-0">S3</span>
+            <span class="min-w-0">
+              <span class="block text-[14px] font-bold text-slate-100">1% 調整開口</span>
+              <span class="block text-[11.5px] text-slate-400 mt-1 leading-5">受控突變 / 動態解群：允許邊界邏輯脫離群組局部重組</span>
+            </span>
+          </div>
+        </button>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4 mt-4">
+          <b class="text-[12.5px] text-slate-200">移動混合比例（B-2 高溫大局期）</b>
+          <div class="mt-3 space-y-2.5 text-[11.5px] text-slate-400">
+            <div>
+              <div class="flex justify-between mb-1"><span>群組平移 Macro</span><span class="metric-val text-cyan-300">45%</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:45%;background:linear-gradient(90deg,#22d3ee,#0891b2)"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1"><span>群組互換 Macro</span><span class="metric-val text-violet-300">27%</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:27%;background:linear-gradient(90deg,#a78bfa,#7c3aed)"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1"><span>群組收斂 Macro</span><span class="metric-val text-amber-300">16%</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:16%;background:linear-gradient(90deg,#fbbf24,#d97706)"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1"><span>群組內微調 Micro</span><span class="metric-val text-lime-300">11%</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:11%;background:linear-gradient(90deg,#a3e635,#4d7c0f)"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1"><span class="text-rose-300">破格突變開口 Mutation</span><span class="metric-val text-rose-300">1%</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:1%;background:#fb7185"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="stageDetail" class="card p-5 md:p-6 bg-slate-950/40 min-h-[420px]"><!-- JS 注入 --></div>
+    </div>
+  </div>
+
+  <!-- 沙盒實作對照 -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">3.3　從架構到程式：沙盒中的實作對照</h3>
+    <p class="text-[13.5px] leading-7 text-slate-400 mb-5">
+      這三個階段不是紙上談兵 —— 它們每一個都對應到
+      <a href="index.html" class="text-cyan-300 underline decoration-cyan-400/40 hover:text-cyan-200">沙盒 <code class="text-[12px]">index.html</code></a> 裡真實存在的函式。
+    </p>
+    <table class="grid-tbl w-full text-[12.5px] leading-6">
+      <thead><tr><th class="w-[22%]">階段</th><th class="w-[28%]">沙盒實作</th><th>核心做法</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="text-cyan-300 font-semibold">S1 群組化</td>
+          <td class="font-mono text-[11.5px] text-slate-300">buildClusters()<br/>macroMoveTranslate()<br/>macroMoveSwapClusters()</td>
+          <td class="text-slate-400">以「共享 net 數」為權重做 <b class="text-slate-200">Heavy-Edge Matching</b> 配對，再以<b class="text-slate-200">平均連結</b>凝聚成 7 個軟群組；之後群組以整包為單位平移或互換。</td>
+        </tr>
+        <tr>
+          <td class="text-amber-300 font-semibold">S2 γ 內化</td>
+          <td class="font-mono text-[11.5px] text-slate-300">congestionPx()<br/>computeCongestionMap()<br/>computeRUDY()</td>
+          <td class="text-slate-400">把 Routability 的<b class="text-slate-200">負對數</b>換算成等效走線長度（px），放進 Metropolis 接受準則：<span class="font-mono text-[11.5px] text-amber-300">ΔC += γ·Δ(等效額外走線長度)</span>。</td>
+        </tr>
+        <tr>
+          <td class="text-rose-300 font-semibold">S3 突變開口</td>
+          <td class="font-mono text-[11.5px] text-slate-300">microMoveLocal()<br/>microMoveCross()<br/>macroMoveCompact()</td>
+          <td class="text-slate-400">低溫期 98% 群組內微調（保護定石）、<b class="text-slate-200">1% 跨群組突變</b>（讓單一 cell 脫離原群組）；突變若使總 Cost 下降即接受，收編為新的局部結構解。</td>
+        </tr>
+        <tr>
+          <td class="text-lime-300 font-semibold">合法性閘門</td>
+          <td class="font-mono text-[11.5px] text-slate-300">clusterOuterOverlap()</td>
+          <td class="text-slate-400">宏移動若讓<b class="text-slate-200">對外重疊面積</b>變大 → 立即否決。群組永遠「整包搬過去、整包都合法」，不會留下非法狀態讓比較失真。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= 第四章 ======================= -->
+<section id="ch4" class="ch-anchor space-y-6">
+  <div class="flex items-center gap-3">
+    <i data-lucide="bar-chart-3" class="w-7 h-7 text-lime-400"></i>
+    <div>
+      <div class="text-[11px] tracking-[.2em] text-slate-500">CHAPTER 04</div>
+      <h2 class="text-2xl font-bold text-slate-100">沙盒實測數據總結與結論對照表</h2>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-cyan-400/25 bg-cyan-400/[.05] p-4">
+    <b class="text-[13px] text-cyan-300">實測 protocol（所有數據皆可重現）</b>
+    <div class="text-[12.5px] leading-7 text-slate-400 mt-1.5">
+      固定網表 <b class="text-slate-200">seed 20261029</b>（35 cells / 55 hyperedges / 16 I/O pads / 10×10 bins）·
+      相同初始位置 · 相同目標函式 · 相同溫度曲線（T: 300 → 0.5 幾何冷卻）·
+      每個策略跑 <b class="text-slate-200">3,000 次迭代</b> ·
+      「收斂步數」定義為 HPWL 首次進入「最終值 +2% 以內」的迭代點。
+      統計表另外跑了 <b class="text-slate-200">10 個不同種子</b>取平均。
+    </div>
+  </div>
+
+  <!-- 4.1 單一網表 -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">4.1　同一張網表上的全策略對照</h3>
+    <p class="text-[13px] leading-7 text-slate-400 mb-5">
+      同一個網表、同一組初始位置，逐一切換策略。下表就是課堂上按「固定網表重跑」後看到的數字。
+    </p>
+    <div class="overflow-x-auto">
+      <table class="grid-tbl w-full text-[12.5px] leading-6 min-w-[760px]">
+        <thead>
+          <tr>
+            <th>策略</th><th>HPWL ↓</th><th>Overlap ↓</th><th>Routability ↑</th><th>c<sub>max</sub> ↓</th><th>收斂步數 ↓</th><th>本質</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-cyan-300 font-semibold">Mode A　貪婪（只看線長）</td>
+            <td class="text-lime-300">3,974</td><td class="text-rose-300">100.00%</td><td class="text-rose-300">0.00%</td>
+            <td class="text-rose-300">70.94</td><td class="text-slate-500">—</td>
+            <td class="text-slate-400">線最短，但整體無解</td>
+          </tr>
+          <tr class="hl">
+            <td class="text-violet-300 font-semibold">B-1　純散裝退火<span class="block text-[10.5px] text-slate-500 font-normal">老師軟體現況（Flat NAND SA）</span></td>
+            <td class="text-lime-300">10,961</td><td class="text-amber-300">0.78%</td><td class="text-amber-300">48.75%</td>
+            <td class="text-amber-300">3.02</td><td class="text-amber-300">2,750</td>
+            <td class="text-slate-400">無結構先驗、接受準則無 γ</td>
+          </tr>
+          <tr>
+            <td class="text-rose-300 font-semibold">B-2　群組化但<b class="font-normal">不帶</b> γ 懲罰<span class="block text-[10.5px] text-slate-500 font-normal">消融實驗（γ = 0）</span></td>
+            <td class="text-lime-300">9,017</td><td class="text-rose-300">3.71%</td><td class="text-rose-300">9.00%</td>
+            <td class="text-rose-300">8.12</td><td class="text-amber-300">2,075</td>
+            <td class="text-rose-300">華容道：線最短卻不能布線</td>
+          </tr>
+          <tr>
+            <td class="text-cyan-300 font-semibold">B-2　群組化 + 1% 開口（γ = 0.4）</td>
+            <td class="text-lime-300">10,276</td><td class="text-amber-300">1.41%</td><td class="text-lime-300">50.02%</td>
+            <td class="text-lime-300">2.67</td><td class="text-lime-300">2,025</td>
+            <td class="text-slate-400">線更短 <b class="text-lime-300">−6.3%</b>、可布線性更好</td>
+          </tr>
+          <tr class="hl">
+            <td class="text-cyan-300 font-semibold">B-2　群組化 + 1% 開口（γ = 0.8）</td>
+            <td class="text-amber-300">11,181</td><td class="text-lime-300">0.45%</td><td class="text-lime-300">47.86%</td>
+            <td class="text-lime-300">2.78</td><td class="text-lime-300">850</td>
+            <td class="text-slate-400">收斂快 <b class="text-lime-300">3.2×</b>、重疊最少</td>
+          </tr>
+          <tr>
+            <td class="text-cyan-300 font-semibold">B-2　群組化 + 1% 開口（γ = 1.5）</td>
+            <td class="text-rose-300">12,059</td><td class="text-lime-300">0.30%</td><td class="text-lime-300">66.10%</td>
+            <td class="text-lime-300">1.97</td><td class="text-lime-300">1,525</td>
+            <td class="text-slate-400">大局容錯優先</td>
+          </tr>
+          <tr>
+            <td class="text-amber-300 font-semibold">Mode C　解析法，γ = 0</td>
+            <td class="text-amber-300">12,067</td><td class="text-lime-300">0.10%</td><td class="text-amber-300">54.19%</td>
+            <td class="text-amber-300">2.61</td><td class="text-slate-500">—</td>
+            <td class="text-slate-400">有 β 無 γ</td>
+          </tr>
+          <tr>
+            <td class="text-amber-300 font-semibold">Mode C　解析法，γ = 0.8</td>
+            <td class="text-amber-300">13,395</td><td class="text-amber-300">0.74%</td><td class="text-lime-300">63.46%</td>
+            <td class="text-lime-300">2.18</td><td class="text-slate-500">—</td>
+            <td class="text-slate-400">三力平衡</td>
+          </tr>
+          <tr>
+            <td class="text-amber-300 font-semibold">Mode C　解析法，γ = 1.5</td>
+            <td class="text-rose-300">14,166</td><td class="text-amber-300">1.22%</td><td class="text-lime-300">69.99%</td>
+            <td class="text-lime-300">1.96</td><td class="text-slate-500">—</td>
+            <td class="text-slate-400">全局平衡</td>
+          </tr>
+          <tr>
+            <td class="text-lime-300 font-semibold">Mode C　γ = 1.5 ＋ Legalization</td>
+            <td class="text-rose-300">19,165<span class="block text-[10.5px] text-slate-500 font-normal">最長</span></td><td class="text-lime-300">0.00%</td><td class="text-lime-300">91.57%</td>
+            <td class="text-lime-300">1.55</td><td class="text-slate-500">—</td>
+            <td class="text-slate-400">物理可實作</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-3 text-[11.5px] text-slate-500 leading-6">
+      ★ 綠底列 = 本次改進的重點列。B-1 與 B-2 使用<b class="text-slate-300">完全相同的目標函式與溫度曲線</b>，
+      唯一差異是「移動的粒度」與「是否把 γ 放進接受準則」。
+    </div>
+  </div>
+
+  <!-- 4.2 收斂曲線 -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">4.2　收斂曲線：群組化把「無效震盪」壓掉</h3>
+    <p class="text-[13px] leading-7 text-slate-400 mb-5">
+      三條曲線用<b class="text-slate-200">同一張網表、同一條溫度曲線</b>跑出來。請注意 B-2（群組化 + γ）
+      在前 300 次迭代就幾乎收斂，而 B-1（散裝）到 2,000 次以後還在劇烈震盪。
+    </p>
+    <div class="grid lg:grid-cols-2 gap-5">
+      <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <b class="text-[12.5px] text-slate-200">HPWL 收斂曲線</b>
+          <span class="text-[10.5px] text-slate-500">越低越好 · 越早平緩越好</span>
+        </div>
+        <canvas id="convHpwl" class="w-full" style="height:210px"></canvas>
+        <div class="flex flex-wrap gap-4 mt-2 text-[11px] text-slate-500">
+          <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-violet-400 inline-block"></span>B-1 純散裝</span>
+          <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-cyan-400 inline-block"></span>B-2 群組 + γ</span>
+          <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-rose-400 inline-block"></span>B-2 群組無 γ（華容道）</span>
+        </div>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <b class="text-[12.5px] text-slate-200">Routability 收斂曲線</b>
+          <span class="text-[10.5px] text-slate-500">越高越好</span>
+        </div>
+        <canvas id="convRoute" class="w-full" style="height:210px"></canvas>
+        <div class="flex flex-wrap gap-4 mt-2 text-[11px] text-slate-500">
+          <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-violet-400 inline-block"></span>B-1 純散裝</span>
+          <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-cyan-400 inline-block"></span>B-2 群組 + γ</span>
+          <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-rose-400 inline-block"></span>B-2 群組無 γ（華容道）</span>
+        </div>
+      </div>
+    </div>
+    <div class="mt-4 grid sm:grid-cols-3 gap-3 text-[12px]">
+      <div class="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+        <div class="text-slate-500 mb-1">B-1 收斂步數</div>
+        <div class="kpi-num text-lg text-violet-300">2,750</div>
+      </div>
+      <div class="rounded-lg border border-cyan-400/30 bg-cyan-400/[.05] p-3">
+        <div class="text-slate-500 mb-1">B-2 收斂步數</div>
+        <div class="kpi-num text-lg text-cyan-300">850</div>
+      </div>
+      <div class="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+        <div class="text-slate-500 mb-1">加速比</div>
+        <div class="kpi-num text-lg text-lime-300">3.2 ×</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4.3 十網表統計 -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">4.3　10 個網表統計：避免「單一網表的幸運值」</h3>
+    <p class="text-[13px] leading-7 text-slate-400 mb-5">
+      單一網表的結果會受初始位置影響很大，所以我們跑了 10 個不同的種子取平均（γ = 0.8）。
+    </p>
+    <div class="overflow-x-auto">
+      <table class="grid-tbl w-full text-[12.5px] leading-6 min-w-[640px]">
+        <thead><tr><th>策略（10 網表平均）</th><th>HPWL ↓</th><th>Routability ↑</th><th>收斂步數 ↓</th><th>Overlap ↓</th><th>勝場</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="text-violet-300 font-semibold">B-1 純散裝退火</td>
+            <td>11,191</td><td>39.09%</td><td>2,095</td><td>0.93%</td>
+            <td class="text-slate-500">基準</td>
+          </tr>
+          <tr class="hl">
+            <td class="text-cyan-300 font-semibold">B-2 群組化 + 1% 開口</td>
+            <td>11,216 <span class="text-[11px] text-amber-300">(+0.2%)</span></td>
+            <td class="text-lime-300">52.37% <span class="text-[11px] text-lime-300">(+13.27 pt)</span></td>
+            <td class="text-lime-300">535 <span class="text-[11px] text-lime-300">(3.9× 快)</span></td>
+            <td>1.65%</td>
+            <td class="text-lime-300">HPWL 4/10<br/>Rout. 7/10<br/><b>收斂 10/10</b></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 rounded-xl border border-lime-400/25 bg-lime-400/[.05] p-4">
+      <b class="text-[13px] text-lime-300">怎麼讀這張表</b>
+      <p class="text-[12.5px] leading-7 text-slate-300 mt-1.5">
+        B-2 的 HPWL 與 B-1 <b class="text-slate-100">幾乎一樣</b>（+0.2%），
+        但 <b class="text-lime-300">可布線性平均高 13.3 個百分點</b>、<b class="text-lime-300">收斂快 3.9 倍而且 10/10 全勝</b>。
+        換句話說：<b class="text-slate-100">B-2 不是「用線長換可布線性」，而是「用同樣的線長拿到更好的可布線性」</b> ——
+        這正是「群組化 + γ 內化」相對於「純散裝退火」的淨收益。
+      </p>
+    </div>
+  </div>
+
+  <!-- 4.4 gamma Pareto -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">4.4　γ 掃描：從「華容道」到「全局平衡」的完整 Pareto 前沿</h3>
+    <p class="text-[13px] leading-7 text-slate-400 mb-5">
+      在 B-1 裡，γ 滑桿是<b class="text-rose-300">完全失效</b>的 —— 因為散裝退火的接受準則裡根本沒有擁塞項。
+      在 B-2 裡，γ 變成一個<b class="text-cyan-300">真正連續可調</b>的旋鈕。下表是 10 網表平均：
+    </p>
+    <div class="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
+      <div class="overflow-x-auto">
+        <table class="grid-tbl w-full text-[12.5px] leading-6 min-w-[520px]">
+          <thead><tr><th>γ</th><th>HPWL</th><th>Δ HPWL vs B-1</th><th>Routability</th><th>Δ Routability</th><th>意義</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="font-mono text-rose-300">0.0</td><td>8,541</td><td class="text-lime-300">−23.7%</td>
+              <td class="text-rose-300">6.88%</td><td class="text-rose-300">−32.21 pt</td>
+              <td class="text-rose-300">華容道：線最短、整體無解</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-slate-300">0.2</td><td>9,941</td><td class="text-lime-300">−11.2%</td>
+              <td class="text-amber-300">35.42%</td><td class="text-rose-300">−3.67 pt</td>
+              <td class="text-slate-400">開始回到可布線區間</td>
+            </tr>
+            <tr class="hl">
+              <td class="font-mono text-cyan-300">0.4</td><td>10,190</td><td class="text-lime-300">−8.9%</td>
+              <td class="text-lime-300">39.78%</td><td class="text-lime-300">+0.68 pt</td>
+              <td class="text-lime-300">雙贏起點</td>
+            </tr>
+            <tr class="hl">
+              <td class="font-mono text-cyan-300">0.6</td><td>10,901</td><td class="text-lime-300">−2.6%</td>
+              <td class="text-lime-300">48.83%</td><td class="text-lime-300">+9.73 pt</td>
+              <td class="text-lime-300">雙贏且可布線性大幅提升 ★</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-amber-300">0.8</td><td>11,216</td><td class="text-amber-300">+0.2%</td>
+              <td class="text-lime-300">52.37%</td><td class="text-lime-300">+13.27 pt</td>
+              <td class="text-slate-400">線長打平、可布線性大幅領先</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-amber-300">1.0</td><td>11,973</td><td class="text-rose-300">+7.0%</td>
+              <td class="text-lime-300">58.33%</td><td class="text-lime-300">+19.24 pt</td>
+              <td class="text-slate-400">可布線性優先</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-rose-300">1.5</td><td>12,186</td><td class="text-rose-300">+8.9%</td>
+              <td class="text-lime-300">63.50%</td><td class="text-lime-300">+24.41 pt</td>
+              <td class="text-slate-400">大局容錯優先（線長代價最大）</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+        <b class="text-[12.5px] text-slate-200">Pareto 前沿（γ → 指標）</b>
+        <svg id="paretoChart" viewBox="0 0 360 260" class="w-full h-auto mt-2"></svg>
+        <div class="mt-2 text-[11px] leading-5 text-slate-500">
+          橫軸 = γ，縱軸 = 相對 B-1 的變化。左下的線（HPWL）與右上（可布線性）夾出一條可行前緣，
+          γ = 0.4 ~ 0.6 之間是<b class="text-lime-300">兩者同時優於 B-1</b> 的甜蜜區。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4.5 消融 -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">4.5　消融實驗：拆開「群組化」與「γ 懲罰」各自的貢獻</h3>
+    <p class="text-[13px] leading-7 text-slate-400 mb-5">
+      只比較 B-1 與 B-2 會分不清是「群組化」還是「γ 懲罰」帶來的改善。把兩者拆開（seed 20261029）：
+    </p>
+    <div class="overflow-x-auto">
+      <table class="grid-tbl w-full text-[12.5px] leading-6 min-w-[700px]">
+        <thead><tr><th>組態</th><th>群組化</th><th>γ 懲罰</th><th>HPWL</th><th>Overlap</th><th>Routability</th><th>結論</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="font-semibold text-violet-300">B-1　散裝退火（老師軟體現況）</td>
+            <td class="text-rose-300">✕</td><td class="text-rose-300">✕</td>
+            <td>10,961</td><td>0.78%</td><td>48.75%</td>
+            <td class="text-slate-400">基準線</td>
+          </tr>
+          <tr>
+            <td class="font-semibold text-cyan-300">B-2a　只做群組化</td>
+            <td class="text-lime-300">✓</td><td class="text-rose-300">✕</td>
+            <td class="text-lime-300">9,017</td><td class="text-rose-300">3.71%</td><td class="text-rose-300">9.00%</td>
+            <td class="text-rose-300">線 −17.7% 但 Routability −39.8 pt → <b>華容道</b></td>
+          </tr>
+          <tr>
+            <td class="font-semibold text-cyan-300">B-2b　只加 γ 懲罰（仍散裝）</td>
+            <td class="text-rose-300">✕</td><td class="text-amber-300">部分</td>
+            <td>10,961</td><td>0.78%</td><td>48.75%</td>
+            <td class="text-slate-400">散裝退火的接受準則<b class="text-rose-300">沒有擁塞項</b>，γ 無從作用</td>
+          </tr>
+          <tr class="hl">
+            <td class="font-semibold text-cyan-300">B-2　群組化 + γ 懲罰（完整版）</td>
+            <td class="text-lime-300">✓</td><td class="text-lime-300">✓</td>
+            <td>11,181</td><td class="text-lime-300">0.45%</td><td>47.86%</td>
+            <td class="text-lime-300">把 HPWL 從華容道拉回來、且重疊率最低</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 rounded-xl border border-amber-400/25 bg-amber-400/[.05] p-4">
+      <b class="text-[13px] text-amber-300">這是整份報告最重要的一張表</b>
+      <p class="text-[12.5px] leading-7 text-slate-300 mt-1.5">
+        它證明了<b class="text-slate-100">「群組化」與「γ 擁塞懲罰」不是可以各自獨立的兩個開關，而是必須成對出現</b>：
+        群組化提供了結構（把邏輯重新打包、把搜尋空間降維），γ 提供了物理邊界（不許為了線長把通道塞死）。
+        只有群組化 → 華容道；只有 γ 而沒有群組化 → 散裝退火的接受準則裡根本沒有擁塞項，γ 擺在那裡也不會動。
+        <b class="text-cyan-300">這也是我對老師系統最實質的一個補充建議。</b>
+      </p>
+    </div>
+  </div>
+
+  <!-- 4.6 結論對照 -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">4.6　結論對照表：前端群組化 × 後端 γ 容錯 → 最終 Routability</h3>
+    <p class="text-[13px] leading-7 text-slate-400 mb-5">
+      把整份報告的因果鏈壓成一張表。
+    </p>
+    <div class="overflow-x-auto">
+      <table class="grid-tbl w-full text-[12.5px] leading-6 min-w-[760px]">
+        <thead>
+          <tr>
+            <th>前端做了什麼</th><th>後端做了什麼</th><th>HPWL</th><th>Routability</th><th>物理意義</th><th>對應真實 EDA 技術</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-rose-300">拆到最碎（純 NAND）</td><td class="text-rose-300">無 γ，線長優先</td>
+            <td class="text-lime-300">3,974</td><td class="text-rose-300">0.00%</td>
+            <td class="text-slate-400">線最短、通道 100% 塞死 —— 華容道</td>
+            <td class="text-slate-500">純邏輯最佳化、無物理回饋</td>
+          </tr>
+          <tr>
+            <td class="text-rose-300">拆到最碎（純 NAND）</td><td class="text-amber-300">散裝退火，無 γ</td>
+            <td>10,961</td><td>48.75%</td>
+            <td class="text-slate-400">搜尋空間 35!，靠運氣撿到一個還行的解</td>
+            <td class="text-slate-500">Simulated Annealing Placement</td>
+          </tr>
+          <tr>
+            <td class="text-cyan-300">重新打包成 7 個軟群組</td><td class="text-rose-300">無 γ</td>
+            <td class="text-lime-300">9,017</td><td class="text-rose-300">9.00%</td>
+            <td class="text-slate-400">線最短，但需求集中 → 通道爆表</td>
+            <td class="text-slate-500">Clustered Placement（無 congestion margin）</td>
+          </tr>
+          <tr class="hl">
+            <td class="text-cyan-300">重新打包成 7 個軟群組</td><td class="text-lime-300">γ 容錯內化 + 1% 突變</td>
+            <td>11,181</td><td class="text-lime-300">47.86%</td>
+            <td class="text-slate-400">線長打平、可布線性顯著提升、收斂快 3.2×</td>
+            <td class="text-slate-500"><b>ePlace / DREAMPlace</b> 的 congestion-aware 目標函數</td>
+          </tr>
+          <tr>
+            <td class="text-violet-300">交給連續最佳化</td><td class="text-amber-300">三力平衡 + 合法化</td>
+            <td class="text-rose-300">19,165</td><td class="text-lime-300">91.57%</td>
+            <td class="text-slate-400">線最長但 100% 合法、可直接送簽核</td>
+            <td class="text-slate-500">Global → Legalization → Detailed Placement</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 4.7 給老師的三條具體建議 -->
+  <div class="card p-5 md:p-7">
+    <h3 class="text-[17px] font-bold text-slate-100 mb-1">4.7　回饋給這套系統的三條具體建議</h3>
+    <div class="grid md:grid-cols-3 gap-4 mt-4">
+      <div class="rounded-xl border border-cyan-400/25 bg-cyan-400/[.05] p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-7 h-7 rounded-lg bg-cyan-400/15 border border-cyan-400/40 text-cyan-300 flex items-center justify-center font-bold text-[12px]">1</span>
+          <b class="text-[13px] text-cyan-300">退火前先分群</b>
+        </div>
+        <p class="text-[12.5px] leading-6 text-slate-300">
+          讓學生在送進退火之前，先用連通度把邏輯打包成功能群組（哪怕只是手動指定）。
+          收斂速度的差異（2,750 → 850 步）是<b class="text-slate-200">最容易被學生看見的物理直覺</b>。
+        </p>
+      </div>
+      <div class="rounded-xl border border-amber-400/25 bg-amber-400/[.05] p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-7 h-7 rounded-lg bg-amber-400/15 border border-amber-400/40 text-amber-300 flex items-center justify-center font-bold text-[12px]">2</span>
+          <b class="text-[13px] text-amber-300">把 γ 放進接受準則</b>
+        </div>
+        <p class="text-[12.5px] leading-6 text-slate-300">
+          目前 γ 只影響 Mode C 的力場，對退火本身毫無作用。
+          讓學生親手把 γ 從 0 拉到 1.5，看著「線長 ↔ 可布線性」的 Pareto 前沿移動 —— 這比講十頁投影片有效。
+        </p>
+      </div>
+      <div class="rounded-xl border border-rose-400/25 bg-rose-400/[.05] p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-7 h-7 rounded-lg bg-rose-400/15 border border-rose-400/40 text-rose-300 flex items-center justify-center font-bold text-[12px]">3</span>
+          <b class="text-[13px] text-rose-300">示範「長線上的反相器」</b>
+        </div>
+        <p class="text-[12.5px] leading-6 text-slate-300">
+          在退火後的長網路線徑上故意塞回一對反相器，展示它如何救回 RC 延遲。
+          這是讓學生理解<b class="text-slate-200">「前端最佳化會製造後端問題，後端最佳化會回頭推翻前端決策」</b>的最佳教材。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="border-t border-slate-800/70 mt-12">
+  <div class="mx-auto max-w-[1600px] px-5 py-8 text-[12px] text-slate-500 leading-6 flex flex-wrap gap-x-8 gap-y-3">
+    <div class="min-w-[260px]">
+      <div class="text-slate-300 font-semibold mb-1">IC EDA 深度架構反思與心得報告</div>
+      <div>計算機結構 · 115 學年上學期</div>
+      <div>所有數據取自 <a href="index.html" class="text-cyan-400 hover:text-cyan-300">演算法動態沙盒</a> 的實際跑測</div>
+    </div>
+    <div>參考文獻：Spindler et al., <i class="text-slate-400">Fast and Accurate RUDY</i> (DATE'09)</div>
+    <div>Jiang et al., <i class="text-slate-400">ePlace</i> (SIGDAC'12) / <i class="text-slate-400">RePlAce</i> (ICCAD'17)</div>
+    <div>Gu et al., <i class="text-slate-400">DREAMPlace</i> (ICCAD'19)</div>
+    <div>Chang et al., <i class="text-slate-400">ABC: A System for Sequential Synthesis</i> (DAC'12)</div>
+    <div class="text-slate-600">Single-File HTML · Tailwind CDN · Lucide Icons · Native Canvas + SVG</div>
+  </div>
+</footer>
+
+<script>
+/* ===== 全域小工具：安全的 Lucide 圖示渲染（CDN 失效時不讓整頁中斷） ===== */
+window.__icons=function(){
+  try{ if(window.lucide && window.lucide.createIcons) window.lucide.createIcons(); }catch(e){}
+};
+
+/* ============================================================================
+ *  第三章：互動式三階段流程圖
+ * ==========================================================================*/
+(function(){
+  'use strict';
+  const ACCENT={cyan:'#22d3ee',violet:'#a78bfa',amber:'#fbbf24',rose:'#fb7185'};
+
+  const STAGES=[
+    {
+      no:'S1', icon:'boxes', accent:'cyan',
+      title:'99% 公式解 — 連通度群組化 / 工藝映射打包',
+      lead:'在退火開始之前，先依「連線密集度」把 35 個基礎閘鎖定成 7 個軟群組（Soft Clusters）。這一步不改變邏輯，只改變「優化問題的變數定義」。',
+      why:[
+        ['為什麼要做','佈局問題的原始變數是 35 個 cell 的座標（搜尋空間 35! ≈ 10<sup>40</sup>）。把高耦合的 cell 打包後，大局階段的變數變成 7 個群組的位置（7! = 5,040）—— 搜尋空間被降維一個數量級。'],
+        ['什麼是 Heavy-Edge Matching','對每一對 cell 計算「共同出現在幾條 net 上」的權重 w(i,j)，先把權重最大的成對鎖定，再以「平均連結（average linkage）」把群組收斂到目標數量。'],
+        ['為什麼要先鎖對再合併','若直接做貪婪凝聚，合併後的群組權重是累加的，於是它永遠是下一次合併的最佳候選 —— 35 個 cell 會被吸成「29 個成員的大團 + 6 個孤兒」。先鎖對再平均連結，群組大小才均衡。'],
+        ['物理意義','這正是真實 EDA 的 gate-level clustering / coarse placement 網路流分解：先把邏輯網拆成「模組」，再把模組當成 macro 來擺。']
+      ],
+      code:`// 沙盒實作：index.html → buildClusters()
+const W = [];                       // w(i,j) = 共同出現在 i,j 上的 net 數
+for (const net of NETS) {
+  const ids = net.pins.filter(p => p.t === 'n').map(p => p.i);
+  for (let a = 0; a < ids.length; a++)
+    for (let b = a + 1; b < ids.length; b++) { W[ids[a]][ids[b]]++; W[ids[b]][ids[a]]++; }
+}
+// ① Heavy-Edge Matching：抓出權重最大的成對並鎖定
+// ② 平均連結凝聚：合併到 7 群（大小均衡：14/11/5/2/1/1/1）`,
+      metric:[['群組數','7 群 / 35 cells'],['群內 net 佔比','35 / 49 = 71%'],['平均群內連線長','171 px（跨群組 225 px）']]
+    },
+    {
+      no:'S2', icon:'shield-check', accent:'amber',
+      title:'大局容錯內化 — Congestion-Aware Objective',
+      lead:'在目標函數裡加入物理耦合的擁塞項，讓佈局期就主動預留走線走廊（圍棋的「厚勢」），避免後期布線陷入華容道死胡同。',
+      why:[
+        ['問題從哪裡來','RUDY 模型的通道容量是 Capacity(G) = K · mean(RUDY) · FreeArea(G)，其中 FreeArea(G) = max(0.15, 1 − 0.8·ρ(G))。也就是說「cell 佔走多少面積，就等於封死多少走線通道」。'],
+        ['量綱是關鍵','若直接把 Δovf（均值尺度）加進接受準則，它會比線長懲罰小三個數量級，等於沒加。所以要換算成「等效額外走線長度」：超載的走線需求必須繞道，等效多走 (c−1)·Capacity 的距離。'],
+        ['與顯示指標對齊','Routability = 100·exp(−2.4·ovf − 0.25·max(0, c_max−1.5))·(1−0.8·Overlap)。目標函數直接用這個指數，才能保證「演算法在優化的東西」和「我們在看的指標」是同一件事 —— 尤其 c_max 那一項，因為真實流程中一個通道被堵死就足以讓整個設計失敗。'],
+        ['最關鍵的後果','γ 一旦進入接受準則，「把 cell 擠成一團換短線」就不再划算 —— 這正是 B-1 與 B-2 的分水嶺。']
+      ],
+      code:`// 沙盒實作：index.html → congestionPx()
+const cong = computeCongestionMap(rudy, rho);   // c(G) = RUDY/(K·RUDȲ·FreeArea)
+let over = 0, maxc = 0;
+for (let i = 0; i < NB; i++) {
+  const e = cong[i] - 1;  if (e > 0) over += e;
+  if (cong[i] > maxc) maxc = cong[i];
+}
+const ovf = over / NB;
+const pxPerUnit = NB * CONG_K * mean(rudy);      // 1 單位指數 ≡ 多少 px 的通道容量
+return pxPerUnit * (2.4 * ovf + 0.25 * Math.max(0, maxc - 1.5));
+// 接受準則：ΔC += γ · Δ(等效額外走線長度)`,
+      metric:[['γ = 0 時','Routability 6.88%'],['γ = 0.6 時','Routability 48.83%'],['γ = 1.5 時','Routability 63.50%']]
+    },
+    {
+      no:'S3', icon:'shuffle', accent:'rose',
+      title:'1% 調整開口 — Controlled Mutation / Dynamic Unclustering',
+      lead:'不把群組 100% 鎖死。在低溫收斂期或以小機率開放「破格微調開口」，允許邊界邏輯閘脫離群組進行局部突變與重組。',
+      why:[
+        ['為什麼一定要留這個開口','群組化把變數綁死，會讓「跨群組的最佳微調」變成不可能 —— 一個 cell 卡在自己的群裡，無法為了隔壁群的一條短線而移動。1% 的跨群組交換（microMoveCross）就是這扇窗戶。'],
+        ['接受準則','破格嘗試若使「總 Cost（含 γ 擁塞懲罰）」下降就接受，並把這個結果<b>收編為新的局部結構解</b> —— 也就是說，它有可能變成下一輪群組化的新基礎。'],
+        ['與圍棋的對應','99% 的「厚勢」＋ 1% 的「脫離厚勢的妙手」：99% 保證不會散架，1% 保證不會卡死。純發會陷入局部極小，純探會浪費所有迭代。'],
+        ['實作比例','高溫大局期：45% 群組平移 / 27% 群組互換 / 16% 群組收斂 / 11% 群組內微調 / 1% 破格突變。低溫微調期：1% 宏移動 / 98% 群組內微調 / 1% 破格突變。']
+      ],
+      code:`// 沙盒實作：index.html → stepSAClustered()
+if (hot) {                     // T > 0.30 · T_START：高溫大局期
+  if (r < 0.45)      macroMoveTranslate();      // 整包群組平移
+  else if (r < 0.72) macroMoveSwapClusters();   // 群組間互換
+  else if (r < 0.88) macroMoveCompact();        // 群組收斂（打包）
+  else if (r < 0.99) microMoveLocal();          // 群組內微調
+  else                microMoveCross();         // 1% 破格突變開口
+} else {                        // 低溫微調期：解開群組束縛
+  if (r < 0.01)      (RNG() < 0.5 ? macroMoveTranslate() : macroMoveSwapClusters());
+  else if (r < 0.99) microMoveLocal();
+  else                microMoveCross();         // 1% 破格突變開口
+}`,
+      metric:[['突變開口機率','1%'],['跨群組 net 佔比','14 / 49 = 29%'],['B-2 收斂步數','850（B-1 為 2,750）'],['加速比','3.2 ×']]
+    }
+  ];
+
+  const detail=document.getElementById('stageDetail');
+  const cards=document.querySelectorAll('.flow-stage');
+
+  function render(i){
+    const s=STAGES[i], col=ACCENT[s.accent];
+    detail.innerHTML=`
+      <div class="fade-in">
+        <div class="flex items-start gap-3 mb-4">
+          <span class="font-mono text-[11px] px-2 py-1 rounded border shrink-0" style="border-color:${col}55;color:${col}">${s.no}</span>
+          <div class="min-w-0">
+            <h3 class="text-[17px] font-bold text-slate-100 leading-snug">${s.title}</h3>
+          </div>
+        </div>
+        <p class="text-[13px] leading-7 text-slate-300 mb-5">${s.lead}</p>
+
+        <div class="grid lg:grid-cols-2 gap-3 mb-5">
+          ${s.why.map(w=>`
+            <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+              <b class="text-[12.5px]" style="color:${col}">${w[0]}</b>
+              <p class="text-[12.5px] leading-6 text-slate-400 mt-1.5">${w[1]}</p>
+            </div>`).join('')}
+        </div>
+
+        <div class="codeblock p-4 text-[11.5px] leading-6 overflow-x-auto mb-5">
+          <div class="text-slate-500 text-[10.5px] tracking-widest mb-2">SANDBOX IMPLEMENTATION</div>
+          <pre style="white-space:pre-wrap;color:#cbd5e1">${s.code.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</pre>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+          ${s.metric.map((m,i)=>`
+            <div class="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+              <div class="text-[10.5px] text-slate-500 mb-1">${m[0]}</div>
+              <div class="kpi-num text-[13px] font-semibold" style="color:${col}">${m[1]}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    window.__icons();
+  }
+
+  cards.forEach(c=>{
+    c.addEventListener('click',()=>{
+      cards.forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+      render(+c.dataset.stage);
+    });
+  });
+  render(0);
+})();
+
+/* ============================================================================
+ *  第四章：收斂曲線 + Pareto 前沿圖
+ * ==========================================================================*/
+(function(){
+  'use strict';
+  const $=(s)=>document.querySelector(s);
+
+  /* ---- 實測序列（seed 20261029，γ=0.8，每 50 迭代取一點） ---- */
+  const S={
+    b1_hpwl:[14318,13226,14535,14407,14617,14531,13503,14559,13961,13489,12900,12885,12185,12195,12750,12150,12100,12158,12362,12221,12006,12106,12177,12052,11982,11884,12158,11805,11598,11760,11660,11672,11672,11712,11620,11544,11099,11017,11189,11189,11439,11693,11606,11751,11596,11543,11456,11456,11391,11297,11298,11202,11223,11189,11015,10885,10806,10989,10961,10961],
+    b2_hpwl:[11986,11470,13241,13417,13566,13129,12930,13062,12784,13022,12570,12464,11835,11763,11974,11949,11711,11600,11307,11469,11484,11728,11728,11404,11360,11372,11348,11330,11330,11345,11345,11345,11292,11426,11426,11381,11381,11282,11224,11224,11239,11213,11213,11213,11213,11195,11182,11182,11182,11195,11195,11195,11195,11195,11195,11182,11182,11182,11181,11181],
+    b2s_hpwl:[12388,12324,11755,11773,10780,10471,10019,10514,10680,10368,10402,10184,9628,9874,10180,10413,9974,10037,9637,9258,9515,9477,9374,9431,9514,9470,9559,9301,9098,9143,9479,9322,9139,9268,9268,9345,9080,9107,9302,9302,9368,8960,9087,8940,8806,8889,8868,9030,9143,9032,9034,8988,9111,9111,9215,9108,9253,8886,8946,8861],
+    b1_route:[41.45,35.86,27.79,43.62,44.27,32.65,46.14,55.04,37.3,46.34,41.43,45.46,54.03,53.44,44.01,45.91,62.14,56.82,53.6,51.24,50.61,45.93,55.39,55.88,55.76,52.93,55.26,52.17,46.29,47.61,50.19,43.33,43.33,44.09,46.6,45.17,46.9,47.07,46.56,46.56,43.92,45.93,47.95,44.28,47.08,46.5,44.43,44.43,47.62,47.25,48.7,48.66,49.84,49.4,53.89,48.93,52.27,54.43,48.75,48.75],
+    b2_route:[32.88,32.21,51.67,52.76,52.61,48.61,48.25,48.76,48.48,50.69,48.31,47.8,44.43,44.76,46.72,46.42,45.89,45.62,45.33,46.58,46.6,47.65,47.65,46.72,46.39,46.72,46.23,46.2,46.2,46.23,46.23,46.23,46.26,47.66,47.66,47.84,47.84,47.73,47.91,47.91,47.92,47.88,47.88,47.88,47.88,47.93,47.87,47.87,47.87,47.93,47.93,47.93,47.93,47.93,47.93,47.87,47.87,47.87,47.86,47.86],
+    b2s_route:[34.62,34.59,32.39,34.49,34.66,25.03,17.26,24.88,17.02,16.76,16.53,15.97,11.69,6.72,10.89,22.13,15.4,17,12.27,15.02,9.92,8,11.78,12.03,11.56,10.91,13.48,14.28,12.97,13.04,15.06,9.45,11.95,12.21,12.21,12.21,12.59,12.39,12.05,12.58,12.56,7.07,9.55,7.78,8.68,8.15,8.26,11.04,8.9,11.13,11.45,9.48,9.66,11.21,11.21,16.22,11.9,10.9,7.5,7.23,7.39]
+  };
+  const STEP=50;
+
+  function drawConv(id, series, opts){
+    const cv=$(id); if(!cv) return;
+    const ctx=cv.getContext('2d');
+    const dpr=window.devicePixelRatio||1;
+    const rect=cv.getBoundingClientRect();
+    const W=rect.width||520, H=rect.height||210;
+    cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+
+    // 背景格線
+    ctx.strokeStyle='rgba(148,163,184,.10)'; ctx.lineWidth=1;
+    ctx.beginPath();
+    for(let i=1;i<4;i++){ const y=H*i/4; ctx.moveTo(0,y); ctx.lineTo(W,y); }
+    for(let i=1;i<6;i++){ const x=W*i/6; ctx.moveTo(x,0); ctx.lineTo(x,H); }
+    ctx.stroke();
+
+    const all=series.flatMap(s=>s.data);
+    const min=Math.min(...all), max=Math.max(...all);
+    const pad=(max-min)*0.10||1;
+    const lo=min-pad, hi=max+pad;
+    const n=series[0].data.length;
+    const px=i=>6+(i/(n-1))*(W-12);
+    const py=v=>H-16-((v-lo)/(hi-lo))*(H-26);
+
+    // 曲線
+    for(const s of series){
+      ctx.strokeStyle=s.color; ctx.lineWidth=s.width||1.7;
+      ctx.beginPath();
+      for(let i=0;i<n;i++){ const x=px(i),y=py(s.data[i]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+      ctx.stroke();
+      if(s.fill){
+        ctx.lineTo(px(n-1),H); ctx.lineTo(px(0),H); ctx.closePath();
+        ctx.fillStyle=s.fill; ctx.fill();
+      }
+    }
+    // 軸標籤
+    ctx.fillStyle='rgba(148,163,184,.6)'; ctx.font='9px ui-monospace,Menlo,monospace';
+    ctx.textAlign='left'; ctx.fillText(opts.leftLabel||String(Math.round(lo)),4,10);
+    ctx.textAlign='right'; ctx.fillText(opts.rightLabel||String(Math.round(hi)),W-4,10);
+    ctx.textAlign='left'; ctx.fillText('ITER 0',4,H-3);
+    ctx.textAlign='right'; ctx.fillText('ITER '+(n*STEP),W-4,H-3);
+  }
+
+  function drawAll(){
+    drawConv('#convHpwl',[
+      {data:S.b1_hpwl,color:'#a78bfa'},
+      {data:S.b2_hpwl,color:'#22d3ee'},
+      {data:S.b2s_hpwl,color:'#fb7185'}
+    ],{leftLabel:'HPWL 低',rightLabel:'HPWL 高'});
+    drawConv('#convRoute',[
+      {data:S.b1_route,color:'#a78bfa'},
+      {data:S.b2_route,color:'#22d3ee'},
+      {data:S.b2s_route,color:'#fb7185'}
+    ],{leftLabel:'0%',rightLabel:'100%'});
+    drawPareto();
+  }
+
+  /* ---- γ Pareto 前沿（SVG） ---- */
+  const GAMMAS=[0,0.2,0.4,0.6,0.8,1.0,1.5];
+  const DHPWL=[-23.7,-11.2,-8.9,-2.6,0.2,7.0,8.9];       // % vs B-1
+  const DROUT=[-32.21,-3.67,0.68,9.73,13.27,19.24,24.41]; // pt vs B-1
+
+  function drawPareto(){
+    const svg=document.getElementById('paretoChart'); if(!svg) return;
+    const W=360,H=260,L=52,R=16,T=16,B=42;
+    const x0=L, x1=W-R, y0=T, y1=H-B;
+    const gx=g=>(x0+(g/1.5)*(x1-x0));
+    const yv=v=> y1-((v+35)/65)*(y1-y0);      // 值域 -35% ~ +30%
+    const ys=v=> y1-((v+35)/65)*(y1-y0);
+
+    let h='';
+    // 網格 + 軸
+    for(let v=-30;v<=30;v+=15){
+      const y=ys(v);
+      h+=`<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="rgba(148,163,184,.12)"/>`;
+      h+=`<text x="${x0-6}" y="${y+3}" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">${v>0?'+':''}${v}%</text>`;
+    }
+    for(const g of GAMMAS){
+      const x=gx(g);
+      h+=`<text x="${x}" y="${y1+14}" fill="#64748b" font-size="9" text-anchor="middle" font-family="monospace">${g}</text>`;
+    }
+    h+=`<text x="${(x0+x1)/2}" y="${H-6}" fill="#94a3b8" font-size="10" text-anchor="middle">γ（後端大局容錯權重）</text>`;
+    h+=`<text x="12" y="${(y0+y1)/2}" fill="#94a3b8" font-size="10" text-anchor="middle" transform="rotate(-90 12 ${(y0+y1)/2})">相對 B-1 的變化</text>`;
+    // 零線
+    h+=`<line x1="${x0}" y1="${ys(0)}" x2="${x1}" y2="${ys(0)}" stroke="rgba(148,163,184,.35)" stroke-dasharray="3 3"/>`;
+
+    // 甜蜜區（γ 0.4~0.6）
+    h+=`<rect x="${gx(0.4)}" y="${y0}" width="${gx(0.6)-gx(0.4)}" height="${y1-y0}" fill="rgba(163,230,53,.08)"/>`;
+    h+=`<text x="${(gx(0.4)+gx(0.6))/2}" y="${y0+11}" fill="#bef264" font-size="9" text-anchor="middle" font-family="monospace">甜蜜區</text>`;
+
+    // 折線 + 點
+    const poly=(arr,color)=>{
+      let p='';
+      arr.forEach((v,i)=>{ p+=`${i?'L':'M'}${gx(GAMMAS[i]).toFixed(1)},${ys(v).toFixed(1)} `; });
+      return `<path d="${p}" fill="none" stroke="${color}" stroke-width="2"/>`+
+        arr.map((v,i)=>`<circle cx="${gx(GAMMAS[i]).toFixed(1)}" cy="${ys(v).toFixed(1)}" r="3.2" fill="${color}"/>`).join('');
+    };
+    h+=poly(DHPWL,'#22d3ee');
+    h+=poly(DROUT,'#a3e635');
+
+    // 圖例
+    h+=`<g font-size="9" font-family="monospace">
+          <rect x="${x0+4}" y="${y1+22}" width="10" height="2.5" fill="#22d3ee"/>
+          <text x="${x0+19}" y="${y1+27}" fill="#94a3b8">Δ HPWL</text>
+          <rect x="${x0+80}" y="${y1+22}" width="10" height="2.5" fill="#a3e635"/>
+          <text x="${x0+95}" y="${y1+27}" fill="#94a3b8">Δ Routability</text>
+        </g>`;
+    svg.innerHTML=h;
+  }
+
+  window.addEventListener('resize',()=>{ drawAll(); });
+  window.__icons();
+  drawAll();
+})();
+</script>
+</body>
+</html>

@@ -103,9 +103,50 @@
     background:#05080f;touch-action:none;cursor:crosshair}
   .metric-val{font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,Consolas,monospace}
   .tag{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid rgba(100,116,139,.55);color:#94a3b8}
+  /* 頂部導覽列 */
+  .nav-btn{
+    display:inline-flex;align-items:center;gap:.4rem;
+    font-size:12px;padding:.34rem .7rem;border-radius:.6rem;
+    border:1px solid rgba(71,85,105,.75); background:rgba(15,23,42,.6);
+    color:#94a3b8; white-space:nowrap;
+    transition:border-color .2s, color .2s, background .2s;
+  }
+  .nav-btn:hover{ border-color:rgba(34,211,238,.55); color:#67e8f9; background:rgba(34,211,238,.08); }
+  .nav-btn-active{
+    border-color:rgba(34,211,238,.7); color:#67e8f9;
+    background:linear-gradient(160deg,rgba(34,211,238,.16),rgba(167,139,250,.10));
+    box-shadow:0 0 0 1px rgba(34,211,238,.14), 0 10px 26px -18px rgba(34,211,238,.9);
+  }
+  /* Mode B 子模式選項 */
+  .sa-sub{
+    border:1px solid rgba(71,85,105,.55); background:rgba(2,6,23,.45);
+    border-radius:.7rem; padding:.6rem .7rem; transition:all .2s;
+  }
+  .sa-sub:hover{ border-color:rgba(148,163,184,.55); }
+  .sa-sub.on{ border-color:rgba(34,211,238,.7); background:linear-gradient(160deg,rgba(34,211,238,.12),rgba(167,139,250,.08)); }
 </style>
 </head>
 <body class="min-h-screen">
+
+<!-- ======================= 頂部導覽 NAVBAR ======================= -->
+<nav class="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md">
+  <div class="mx-auto max-w-[1600px] px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5 text-[12.5px] text-slate-400 min-w-0">
+      <i data-lucide="circuit-board" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+      <span class="font-semibold text-slate-200 whitespace-nowrap">IC EDA 學習筆記</span>
+      <span class="hidden sm:inline text-slate-700">|</span>
+      <span class="hidden sm:inline truncate">計算機結構 · 115 學年上學期</span>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="index.html" class="nav-btn nav-btn-active" title="回到演算法動態沙盒">
+        <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i><span>📊 演算法動態沙盒</span>
+      </a>
+      <a href="reflection.html" class="nav-btn" title="前往深度架構反思與心得報告">
+        <i data-lucide="book-open-text" class="w-3.5 h-3.5"></i><span>📝 深度架構反思與心得報告</span>
+      </a>
+    </div>
+  </div>
+</nav>
 
 <!-- ======================= 頂部 HERO ======================= -->
 <header class="relative overflow-hidden border-b border-slate-800/80">
@@ -234,18 +275,20 @@
         <table class="grid-tbl w-full text-[12.5px] leading-6">
           <thead><tr><th>策略</th><th>HPWL</th><th>Overlap</th><th>Routability</th><th>本質</th></tr></thead>
           <tbody>
-            <tr><td class="text-cyan-300">Greedy（α only）</td><td class="text-lime-300">≈ 3,974<br><span class="text-[10px] text-slate-500">最短</span></td><td class="text-rose-300">100%</td><td class="text-rose-300">0%</td><td class="text-slate-400">短視</td></tr>
-            <tr><td class="text-violet-300">Simulated Annealing</td><td class="text-lime-300">≈ 11,000</td><td class="text-amber-300">≈ 1%</td><td class="text-amber-300">≈ 47%</td><td class="text-slate-400">離散跳躍式收斂</td></tr>
-            <tr><td class="text-amber-300">Analytical, γ=0</td><td class="text-amber-300">≈ 12,100</td><td class="text-lime-300">≈ 0%</td><td class="text-amber-300">≈ 54%</td><td class="text-slate-400">有 β 無 γ</td></tr>
-            <tr><td class="text-amber-300">Analytical, γ=1.5</td><td class="text-amber-300">≈ 14,200</td><td class="text-lime-300">≈ 0%</td><td class="text-lime-300">≈ 68%</td><td class="text-slate-400">全局平衡</td></tr>
-            <tr><td class="text-lime-300">＋ Legalization</td><td class="text-rose-300">≈ 18,100<br><span class="text-[10px] text-slate-500">最長</span></td><td class="text-lime-300">0%</td><td class="text-lime-300">≈ 85%</td><td class="text-slate-400">物理可實作</td></tr>
+            <tr><td class="text-cyan-300">Mode A 貪婪（α only）</td><td class="text-lime-300">3,974<br><span class="text-[10px] text-slate-500">最短</span></td><td class="text-rose-300">100%</td><td class="text-rose-300">0.0%</td><td class="text-slate-400">短視</td></tr>
+            <tr><td class="text-violet-300">B-1 純散裝退火</td><td class="text-lime-300">10,961</td><td class="text-amber-300">0.78%</td><td class="text-amber-300">48.8%</td><td class="text-slate-400">無結構先驗</td></tr>
+            <tr><td class="text-cyan-300">B-2 群組化，γ=0.4</td><td class="text-lime-300">10,276</td><td class="text-amber-300">1.41%</td><td class="text-lime-300">50.0%</td><td class="text-slate-400">群組 + 甜蜜點</td></tr>
+            <tr><td class="text-cyan-300">B-2 群組化，γ=1.5</td><td class="text-amber-300">12,059</td><td class="text-lime-300">0.30%</td><td class="text-lime-300">66.1%</td><td class="text-slate-400">群組 + 大局容錯</td></tr>
+            <tr><td class="text-amber-300">Mode C 解析法, γ=0</td><td class="text-amber-300">12,067</td><td class="text-lime-300">0.10%</td><td class="text-amber-300">54.2%</td><td class="text-slate-400">有 β 無 γ</td></tr>
+            <tr><td class="text-amber-300">Mode C 解析法, γ=1.5</td><td class="text-amber-300">14,166</td><td class="text-amber-300">1.22%</td><td class="text-lime-300">70.0%</td><td class="text-slate-400">全局平衡</td></tr>
+            <tr><td class="text-lime-300">＋ Legalization</td><td class="text-rose-300">19,165<br><span class="text-[10px] text-slate-500">最長</span></td><td class="text-lime-300">0.00%</td><td class="text-lime-300">91.6%</td><td class="text-slate-400">物理可實作</td></tr>
           </tbody>
         </table>
         <div class="mt-4 text-[12px] leading-6 text-slate-400 border-t border-slate-800 pt-4">
           <b class="text-slate-300">課堂重點：</b>這不是「誰的 HPWL 最低誰就贏」。
           真實競賽指標是 <b class="text-cyan-300">Timing × Area × Power × Routability</b> 的加權總和；
           佈局 (Placement) 只是整條 RTL→GDSII 流程中，<b>唯一還能低成本改變「物理可行性」的階段</b>。
-          <div class="mt-1.5 text-slate-500">上表為本頁沙盒的實測數據（同一組網表、同一組初始位置）。</div>
+          <div class="mt-1.5 text-slate-500">上表為本頁沙盒的實測數據：固定網表 <b class="text-slate-400">seed 20261029</b>、同一組初始位置、每個策略跑 <b class="text-slate-400">3,000 次迭代</b>。B-2 的 γ 值即右側滑桿的權重。</div>
         </div>
       </div>
     </div>
@@ -369,6 +412,38 @@
         <div id="modeNote" class="mt-3 text-[11.5px] leading-6 text-slate-400 border-t border-slate-800 pt-3"></div>
       </div>
 
+      <!-- Mode B 子模式（僅在 Mode B 顯示） -->
+      <div class="card p-4" id="saSubCard">
+        <h3 class="text-[12px] tracking-widest text-slate-500 mb-3">MODE B SUB-MODE · 退火策略</h3>
+        <div class="space-y-2">
+          <label class="sa-sub on flex items-start gap-2.5 cursor-pointer" data-sub="B1">
+            <input type="radio" name="saSub" value="B1" class="chk mt-1" checked>
+            <span class="min-w-0">
+              <span class="block text-[13px] font-semibold text-slate-100">B-1 · 純散裝退火（Flat NAND SA）</span>
+              <span class="block text-[11px] text-slate-500 leading-5 mt-0.5">老師軟體現況：所有 cell 視為獨立個體隨機兩兩交換。高溫期容易把邏輯緊密的元件甩到對角線，內部連線大量外溢，收斂慢。</span>
+            </span>
+          </label>
+          <label class="sa-sub flex items-start gap-2.5 cursor-pointer" data-sub="B2">
+            <input type="radio" name="saSub" value="B2" class="chk mt-1">
+            <span class="min-w-0">
+              <span class="block text-[13px] font-semibold text-slate-100">B-2 · 群組化 + 1% 突變開口</span>
+              <span class="block text-[11px] text-slate-500 leading-5 mt-0.5">Soft-Clustered SA：先依連通度把高耦合 cell 打包成軟群組。高溫以「整包群組」為單位移動定大局，低溫解開束縛微調，並保留 1% 破格突變開口。</span>
+            </span>
+          </label>
+        </div>
+        <div class="mt-3 text-[11px] text-slate-500 leading-5 border-t border-slate-800 pt-3" id="saSubNote"></div>
+        <label class="flex items-center gap-2.5 mt-2 pt-2 border-t border-slate-800 text-[11.5px] text-slate-400 cursor-pointer">
+          <input id="cGamma" type="checkbox" class="chk" checked>
+          啟用 <b class="text-amber-300">γ 擁塞懲罰</b>（取消 = 「純群組化」對照組）
+        </label>
+        <button id="btnGammaSweet" class="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-[12px] bg-amber-400/10 border border-amber-400/40 text-amber-300 hover:bg-amber-400/20 transition">
+          <i data-lucide="target" class="w-3.5 h-3.5"></i>套用實測甜蜜點 γ = 0.6（10 網表實測雙贏）
+        </button>
+        <div class="mt-2 text-[11px] text-slate-500 leading-5">
+          群組數：<b id="clusterCount" class="text-cyan-300">—</b>　·　群組化由「連通度加權 + Heavy-Edge 凝聚」自動求得。
+        </div>
+      </div>
+
       <!-- 權重滑桿 -->
       <div class="card p-4">
         <h3 class="text-[12px] tracking-widest text-slate-500 mb-3">COST WEIGHTS · 目標函數權重</h3>
@@ -421,6 +496,9 @@
         <label class="flex items-center gap-2.5 py-1.5 text-[12.5px] text-slate-300 cursor-pointer">
           <input id="cGrid" type="checkbox" class="chk" checked> 10×10 Grid Bins
         </label>
+        <label class="flex items-center gap-2.5 py-1.5 text-[12.5px] text-slate-300 cursor-pointer">
+          <input id="cClusters" type="checkbox" class="chk" checked> 邏輯功能群組外框 (Soft Clusters)
+        </label>
       </div>
 
       <!-- 操作按鈕 -->
@@ -439,8 +517,20 @@
           <button id="btnReset" class="col-span-2 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] bg-slate-800/70 border border-slate-700 text-slate-300 hover:border-rose-400/50 hover:text-rose-300 transition">
             <i data-lucide="rotate-ccw" class="w-4 h-4"></i>隨機重置網表 (Reset)
           </button>
+          <button id="btnSeed" class="col-span-2 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] bg-slate-800/70 border border-slate-700 text-slate-300 hover:border-cyan-400/50 hover:text-cyan-300 transition">
+            <i data-lucide="pin" class="w-4 h-4"></i>固定網表重跑 (Seed 20261029)
+          </button>
+          <button id="btnFast" class="col-span-2 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] bg-slate-800/70 border border-slate-700 text-slate-300 hover:border-violet-400/50 hover:text-violet-300 transition">
+            <i data-lucide="zap" class="w-4 h-4"></i>快轉至收斂 (3000 迭代)
+          </button>
+          <button id="btnRecord" class="col-span-2 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] bg-slate-800/70 border border-slate-700 text-slate-300 hover:border-lime-400/50 hover:text-lime-300 transition">
+            <i data-lucide="bookmark-plus" class="w-4 h-4"></i>記錄本次結果（用於 B-1 / B-2 對比）
+          </button>
         </div>
         <div class="mt-2 text-[11px] text-slate-500 leading-5">快捷鍵：<b class="text-slate-400">空白鍵</b> = 開始/暫停</div>
+        <div class="mt-1.5 text-[11px] text-slate-600 leading-5">
+          想公平比較 B-1 / B-2，請按 <b class="text-cyan-300">固定網表重跑</b> 取得<b class="text-slate-400">完全相同的網表與初始位置</b>。
+        </div>
       </div>
     </div>
 
@@ -481,10 +571,11 @@
         <div class="card p-4">
           <b class="text-violet-300 text-[12.5px]">可切換的實驗</b>
           <ul class="mt-1.5 space-y-1 list-disc pl-4">
-            <li><b class="text-cyan-300">模式 A vs 模式 C</b>：同樣只看線長，誰的 Routability 較高？（0% vs 64%）</li>
+            <li><b class="text-cyan-300">模式 A vs 模式 C</b>：同樣只看線長，誰的 Routability 較高？（0.0% vs 63.5%）</li>
             <li>模式 C 將 <b class="text-amber-300">γ = 0 → 1.5</b>，觀察預留氣場把元件撐開、熱力圖由黃轉綠。</li>
-            <li>模式 B 觀察溫度冷卻後，交換頻率驟降、畫面呈「跳躍式」收斂。</li>
-            <li>跑完按 <b class="text-amber-300">合法化</b>：元件整齊對齊標準列 → Overlap 歸零、Routability 升到 ~85%<br>
+            <li><b class="text-violet-300">B-1 vs B-2</b>：同一張網表（按「固定網表重跑」），看「散裝退火」與「群組化 + 1% 突變開口」的收斂速度差 —— 群組化把搜尋空間壓縮一個數量級。</li>
+            <li>把 <b class="text-amber-300">γ 從 0 拉到 1.5</b>：親眼看到「邏輯最簡」與「最好布線」互相打架 —— γ=0 時線最短但 Routability 只有 9%。</li>
+            <li>跑完按 <b class="text-amber-300">合法化</b>：元件整齊對齊標準列 → Overlap 歸零、Routability 升到 ~92%<br>
               <span class="text-slate-500">（但 HPWL 會變長 —— 這就是真實 EDA 中 legalization 與 routability 的 trade-off）</span></li>
           </ul>
         </div>
@@ -545,6 +636,21 @@
         </div>
       </div>
 
+      <!-- B-1 vs B-2 實測對比 -->
+      <div class="card p-4">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <h3 class="text-[12px] tracking-widest text-slate-500">A/B COMPARISON · B-1 vs B-2</h3>
+          <span class="text-[10px] text-slate-600">同一網表實測</span>
+        </div>
+        <table class="grid-tbl w-full text-[11.5px] leading-5">
+          <thead><tr><th>指標</th><th class="text-violet-300">B-1 散裝</th><th class="text-cyan-300">B-2 群組</th><th>差異</th></tr></thead>
+          <tbody id="cmpBody">
+            <tr><td colspan="4" class="text-slate-600 py-2">尚未記錄。請用「固定網表重跑」→ 跑 B-1 → 記錄 → 再跑 B-2 → 記錄。</td></tr>
+          </tbody>
+        </table>
+        <div class="mt-2 text-[10.5px] text-slate-600 leading-5" id="cmpFoot">記錄的是當下迭代點的實測值。</div>
+      </div>
+
       <!-- 數值對照 -->
       <div class="card p-4 text-[11.5px] leading-6 text-slate-400">
         <b class="text-slate-200 text-[12.5px]">公式速查</b>
@@ -561,6 +667,7 @@
           節點：<b class="text-slate-400">35 個標準邏輯元件（面積不一）</b>、
           <b class="text-slate-400">55 條 hyperedge</b>、<b class="text-slate-400">16 個固定 I/O Pads</b>、
           網格 <b class="text-slate-400">10 × 10 Grid Bins</b>。
+          依連通度自動分出 <b class="text-cyan-300">7 個邏輯功能群組</b>（Mode B-2 的結構先驗）。
         </div>
       </div>
     </div>
@@ -837,8 +944,20 @@ window.__icons=function(){
   let mode='B', running=false, iter=0;
   let alpha=1.0, beta=1.0, gamma=0.8;
   let showWires=true, showHeat=true, showHalo=true, showGrid=true;
+  let showClusters=true;
   let legalized=false;
   let hoverNode=-1, dragNode=-1;
+
+  // Mode B 子模式：'B1' = 純散裝退火 (Flat NAND SA)；'B2' = 群組化 + 1% 突變開口
+  let saSub='B1';
+  let useGamma=true;         // B-2 是否啟用 γ 擁塞懲罰（關閉 = 純群組化對照組）
+  // 邏輯功能群組（Soft Clusters）
+  let CLUSTERS=[], CLUSTER_OF=[];
+  const CLUSTER_TARGET=7;    // 目標群組數（6~8）
+  const CLUSTER_COLORS=['#22d3ee','#a78bfa','#fbbf24','#a3e635','#fb7185','#38bdf8','#f472b6','#34d399'];
+  // B-1 / B-2 實測結果（用於課堂對比）
+  const SA_RESULT={B1:null,B2:null};
+  let currentSeed=20261029;
 
   // 模擬退火參數
   const T_START=300, T_END=0.5, TEMP_ITERS=3000;
@@ -857,6 +976,7 @@ window.__icons=function(){
 
   function buildNetlist(seed){
     RNG=mulberry32(seed);
+    currentSeed=seed;
     NODES=[]; NETS=[]; PADS=[];
 
     /* --- 3.1 生成 35 個標準邏輯元件（三種面積等級） --- */
@@ -938,6 +1058,7 @@ window.__icons=function(){
     iter=0; temperature=T_START; legalized=false; CACHE=null;
     HISTORY.hpwl.length=0; HISTORY.route.length=0; HISTORY.iter.length=0;
     resolveOverlaps();       // 初始位置做一次去重疊 → 讓 Overlap 指標從 0% 起算
+    buildClusters();         // 依連通度把 cell 打包成軟群組（B-2 的前置處理）
   }
 
   /** 去除互相重疊的 cell（沿最小穿透軸互推），用於初始位置整理 */
@@ -967,6 +1088,90 @@ window.__icons=function(){
       }
       if(!moved) break;
     }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 3.5 連通度群組化 (Connectivity Clustering / Heavy-Edge Matching)
+   *
+   *   想法：把「被同一批 net 拉在一起」的 cell 打包成軟群組 (Soft Cluster)，
+   *   讓退火以「整包」為單位移動 —— 保護局部定石不被高溫期打碎，
+   *   同時把搜尋空間從「N 個 cell 的排列」壓縮成「K 個群組的排列」。
+   *
+   *   這正是現代 EDA 裡 placement clustering（如 NTUplace / DREAMPlace 的
+   *   coarse-placement 分群、gate-level clustering 網路流分解）的同一個思想。
+   * ------------------------------------------------------------------ */
+  function buildClusters(target){
+    const K=target||CLUSTER_TARGET;
+    const N=NODES.length;
+
+    /* (1) 加權鄰接：w(i,j) = 同時出現在 i 與 j 上的 net 數（連線密集度） */
+    const W=[];
+    for(let i=0;i<N;i++) W.push(new Float64Array(N));
+    for(const net of NETS){
+      const ids=[];
+      for(const p of net.pins) if(p.t==='n') ids.push(p.i);
+      for(let a=0;a<ids.length;a++)
+        for(let b=a+1;b<ids.length;b++){ W[ids[a]][ids[b]]+=1; W[ids[b]][ids[a]]+=1; }
+    }
+
+    /* (2) Heavy-Edge Matching：先把「連線權重最大」的一對對抓出來鎖定。
+           為什麼要先鎖定？因為直接做貪婪凝聚會出現「巨無霸群」——
+           合併後的群組權重是累加的，於是它永遠是下一次合併的最佳候選，
+           35 個 cell 最後會被吸成「29 個成員的大團 + 幾個孤兒」。
+           HEM 先把「天然綁在一起」的對子配好，之後再合併就均衡得多。 */
+    const locked=new Array(N).fill(false);
+    const gmem=[];
+    while(true){
+      let bi=-1,bj=-1,bw=0;
+      for(let i=0;i<N;i++){
+        if(locked[i]) continue;
+        for(let j=i+1;j<N;j++){
+          if(locked[j]) continue;
+          if(W[i][j]>bw){ bw=W[i][j]; bi=i; bj=j; }
+        }
+      }
+      if(bi<0||bw<=0) break;
+      locked[bi]=locked[bj]=true;
+      gmem.push([bi,bj]);
+    }
+    for(let i=0;i<N;i++) if(!locked[i]) gmem.push([i]);
+
+    /* (3) 平均連結凝聚 (Average-Linkage)：合併兩群時看的是「平均連線強度」
+           而非「總權重」。平均連結不會讓大群壯大 → 群組大小均衡。 */
+    const G=gmem.length;
+    const gw=[]; for(let i=0;i<G;i++) gw.push(new Float64Array(G));
+    for(let a=0;a<G;a++) for(let b=a+1;b<G;b++){
+      let s=0;
+      for(const i of gmem[a]) for(const j of gmem[b]) s+=W[i][j];
+      gw[a][b]=gw[b][a]=s/(gmem[a].length*gmem[b].length);
+    }
+    const alive=new Set(); for(let i=0;i<G;i++) alive.add(i);
+    while(alive.size>K){
+      let ba=-1,bb=-1,bw=0;
+      for(const a of alive) for(const b of alive){
+        if(a===b) continue;
+        if(gw[a][b]>bw){ bw=gw[a][b]; ba=a; bb=b; }
+      }
+      if(ba<0) break;
+      const na=gmem[ba].length, nb=gmem[bb].length, nt=na+nb;
+      for(const h of alive){
+        if(h===ba||h===bb) continue;
+        const v=(na*gw[ba][h]+nb*gw[bb][h])/nt;
+        gw[ba][h]=gw[h][ba]=v;
+      }
+      gmem[ba]=gmem[ba].concat(gmem[bb]); gmem[bb]=[];
+      alive.delete(bb);
+    }
+
+    /* (4) 收集結果（依成員數由大到小 → 群組編號穩定且好讀） */
+    const arr=[];
+    for(const g of alive) arr.push(gmem[g].slice());
+    arr.sort((a,b)=>b.length-a.length);
+    CLUSTERS=arr.map((members,idx)=>({id:idx,members,color:CLUSTER_COLORS[idx%CLUSTER_COLORS.length]}));
+    CLUSTER_OF=new Array(N).fill(0);
+    CLUSTERS.forEach(c=>c.members.forEach(m=>{ CLUSTER_OF[m]=c.id; }));
+    const el=$('#clusterCount'); if(el) el.textContent=CLUSTERS.length+' 群 / '+N+' cells';
+    return CLUSTERS;
   }
 
   /* ------------------------------------------------------------------ *
@@ -1280,11 +1485,11 @@ window.__icons=function(){
     return c;
   }
 
-  function stepSA(){
-    // 隨機挑兩個 cell 交換座標（離散跳躍式移動）
-    const u=randInt(NODES.length), v=randInt(NODES.length);
-    if(u===v) return;
-    const A=NODES[u], B=NODES[v];
+  /** Micro-move：交換兩個 cell 的座標（Metropolis 接受準則）。
+   *  B-1（純散裝）與 B-2（群組化）的「微觀步驟」共用同一份代價函式，
+   *  這樣兩者的差異就只來自「移動的粒度」，而不是來自不同的目標函式。 */
+  function microSwap(a,b){
+    const A=NODES[a], B=NODES[b];
     updatePinCounts();
     const before=localCost(A,A.x,A.y)+localCost(B,B.x,B.y);
     const after =localCost(A,B.x,B.y)+localCost(B,A.x,A.y);
@@ -1294,9 +1499,352 @@ window.__icons=function(){
     if(dC<=0 || RNG()<Math.exp(-dC/Math.max(temperature,1e-6))){
       const tx=A.x,ty=A.y; A.x=B.x; A.y=B.y; B.x=tx; B.y=ty;
     }
+    return dC;
+  }
+
+  function stepSA(){
+    // 隨機挑兩個 cell 交換座標（離散跳躍式移動）
+    const u=randInt(NODES.length), v=randInt(NODES.length);
+    if(u===v) return;
+    microSwap(u,v);
     // 幾何冷卻 (Geometric Cooling)
     temperature=Math.max(T_END, T_START*Math.pow(T_END/T_START, Math.min(1,iter/TEMP_ITERS)));
     CACHE=null;                       // 位置已改變 → 幾何場快取失效
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 7.2 Mode B-2 — 群組化退火 (Soft-Clustered SA)
+   *     「99% 群組公式解 + 1% 突變開口」
+   *
+   *   高溫大局期 (T > 0.30·T_START)
+   *       93%  Macro-move：整包群組平移 / 群組間交換 → 迅速奠定大局
+   *        6%  Micro-move（群組內）
+   *        1%  Micro-move（跨群組）← 破格突變開口
+   *   低溫微調期 (T ≤ 0.30·T_START)
+   *        1%  Macro-move（仍保留少量大局能力）
+   *       98%  Micro-move（群組內）
+   *        1%  Micro-move（跨群組）← 破格突變開口
+   *
+   *   「破格突變」＝ 讓單一 cell 脫離原群組、與其它群組的 cell 交換位置。
+   *   若此舉使總 Cost（含 γ 擁塞懲罰）下降 → 接受，收編為「新的局部結構解」。
+   *
+   *   註：代價函式與 B-1 完全相同（線長 α + 走線佔地 γ' + 重疊 β + pin 擁擠），
+   *       唯一的差別是「移動的粒度」—— 這正是本實驗要 isolate 的變因。
+   * ------------------------------------------------------------------ */
+  const MUTATE_P    = 0.01;   // 1% 破格突變開口
+  const HOT_RATIO   = 0.30;   // 高溫大局期門檻（相對 T_START）
+  const MACRO_P_COLD= 0.01;   // 低溫期保留的宏移動機率（大局能力）
+  /** B-2 的高溫大局期移動混合比例（可在介面調整 → 方便課堂做參數實驗）
+   *    45% 群組平移 / 27% 群組互換 / 16% 群組收斂 / 11% 群組內微調 / 1% 破格突變 */
+  const SA_CFG={ transP:0.45, swapP:0.27, compactP:0.16 };
+
+  /* ------------------------------------------------------------------ *
+   *  γ 擁塞懲罰：以「等效額外走線長度」(px) 表示
+   *
+   *  為什麼需要它？RUDY 模型的通道容量是
+   *      Capacity(G) = K · mean(RUDY) · FreeArea(G),  FreeArea(G)=max(0.15, 1−0.8ρ(G))
+   *  也就是說「cell 佔走多少面積，就等於封死多少走線通道」。
+   *  B-1 的目標函式裡沒有這一項 → 演算法可以把 cell 全部擠成一團換到最短線長
+   *  （這正是 Mode A 的病根）。
+   *
+   *  ★ 量綱是關鍵：若直接用 Δovf（均值尺度）會比線長懲罰小 3 個數量級，等於沒加。
+   *    所以改算成「超載的走線需求必須繞道 → 等效多走多少 px」：
+   *        通道超載量 = Σ_G max(0, c(G)−1) × (K · mean(RUDY))
+   *    這一項和 HPWL 同樣是 px，α / β / γ 三個權重才真正可比。
+   * ------------------------------------------------------------------ */
+  function congestionPx(){
+    const boxes=computeNetBoxes();
+    const rho=computeDensity().rho;
+    const rudy=computeRUDY(boxes);
+    const cong=computeCongestionMap(rudy,rho);
+    let mean=0; for(let i=0;i<NB;i++) mean+=rudy[i];
+    mean/=NB||1;
+    // ① 平均超載：ovf = (1/NB)·Σ_G max(0, c(G)−1)
+    let over=0, maxc=0;
+    for(let i=0;i<NB;i++){
+      const e=cong[i]-1; if(e>0) over+=e;
+      if(cong[i]>maxc) maxc=cong[i];
+    }
+    const ovf=over/NB;
+    // ② 最差通道：真實流程中「一個通道被堵死」就足以讓整個設計失敗
+    const cmaxEx=Math.max(0,maxc-1.5);
+    // ③ 把無量綱的「負對數可布線率」換算成等效 px：
+    //    Routability = 100·exp(−2.4·ovf − 0.25·cmaxEx)·(1−0.8·Overlap)
+    //    1 單位指數 ≡ NB · K · mean(RUDY) px 的通道容量
+    const pxPerUnit=NB*CONG_K*mean;
+    return pxPerUnit*(2.4*ovf + 0.25*cmaxEx);
+  }
+  /** γ 擁塞懲罰的權重（可由介面關閉 → 作為「純群組化」對照組） */
+  function densWeight(){ return useGamma ? gamma : 0; }
+
+  /** B-2 專用的 micro-move：與 B-1 相同的代價，再加上 γ 擁塞懲罰 */
+  function microSwapB2(a,b){
+    const A=NODES[a], B=NODES[b];
+    updatePinCounts();
+    const before=localCost(A,A.x,A.y)+localCost(B,B.x,B.y);
+    const beforeCong=congestionPx();
+    const after =localCost(A,B.x,B.y)+localCost(B,A.x,A.y);
+    const tx=A.x,ty=A.y; A.x=B.x; A.y=B.y; B.x=tx; B.y=ty;      // 先套用
+    const afterCong=congestionPx();
+    const dC=(after-before)+COST_PIN*pinDeltaCost(A,B)+densWeight()*(afterCong-beforeCong);
+    if(dC<=0 || RNG()<Math.exp(-dC/Math.max(temperature,1e-6))){
+      return dC;                                                // 接受（保留新位置）
+    }
+    const bx=A.x,by=A.y; A.x=B.x; A.y=B.y; B.x=bx; B.y=by;       // 回滾
+    return dC;
+  }
+
+  /** 群組成員的局部代價總和（線長 + 走線佔地 + 重疊）；用預配置緩衝區避免 hot loop 反覆配置物件 */
+  function clusterLocalSum(members){
+    const rects=RECT_BUF, N=NODES.length;
+    for(let i=0;i<N;i++){ const n=NODES[i],r=rects[i]; r.x0=n.x-n.w/2; r.y0=n.y-n.h/2; r.x1=n.x+n.w/2; r.y1=n.y+n.h/2; }
+    let c=0;
+    for(let mi=0;mi<members.length;mi++){
+      const id=members[mi], node=NODES[id];
+      const ov={idx:node.id,x:node.x,y:node.y};
+      for(const nid of node.nets){
+        const net=NETS[nid];
+        c+=COST_WL*netWL(net,ov)+COST_CONG*netBoxArea(net,ov);
+      }
+      const r=rects[id];
+      for(let j=0;j<N;j++){
+        if(j===id) continue;
+        const o=rects[j];
+        const w=Math.min(r.x1,o.x1)-Math.max(r.x0,o.x0);
+        if(w<=0) continue;
+        const h=Math.min(r.y1,o.y1)-Math.max(r.y0,o.y0);
+        if(h<=0) continue;
+        c+=COST_OVL*w*h;
+      }
+    }
+    return c;
+  }
+
+  /** 全域 pin 擁擠代價 Σ PINCOUNT²（與 pinDeltaCost 同源，只是整體重算） */
+  function pinCongestionSum(){
+    updatePinCounts();
+    let s=0; for(let i=0;i<NB;i++) s+=PINCOUNT[i]*PINCOUNT[i];
+    return s;
+  }
+
+  /** 群組與「群組外部 cell」的重疊面積 —— 這才是真正的「非法佈局」。
+   *  群組「內部」的互相重疊由 COST_OVL 懲罰即可，不必直接否決（否則群組永遠無法收斂）。 */
+  function clusterOuterOverlap(members){
+    const N=NODES.length;
+    const inC=new Set(members);
+    let area=0;
+    for(let mi=0;mi<members.length;mi++){
+      const a=NODES[members[mi]];
+      for(let j=0;j<N;j++){
+        if(j===a.id) continue;
+        if(inC.has(j)) continue;                 // 群組內部重疊不算「非法」
+        const b=NODES[j];
+        const ow=Math.min(a.x+a.w/2,b.x+b.w/2)-Math.max(a.x-a.w/2,b.x-b.w/2);
+        if(ow<=0) continue;
+        const oh=Math.min(a.y+a.h/2,b.y+b.h/2)-Math.max(a.y-a.h/2,b.y-b.h/2);
+        if(oh<=0) continue;
+        area+=ow*oh;
+      }
+    }
+    return area;
+  }
+
+  /** 把一群 cell 整體平移 (dx,dy) → 評估 ΔCost → 接受或回滾。
+   *  ★ 合法性閘門：宏移動若讓「對外重疊」變大 → 直接否決。
+   *    真實 placement 工具的 macro-move 後一定會接一個 legalization；
+   *    與其讓演算法在「非法狀態」上做比較，不如在移動當下就拒絕，
+   *    這樣群組永遠是「整包搬過去、整包都合法」。 */
+  function macroTranslate(members,dx,dy){
+    const saved=members.map(i=>[NODES[i].x,NODES[i].y]);
+    const beforeOv=clusterOuterOverlap(members);
+    const beforeCost=clusterLocalSum(members);
+    const beforePin=pinCongestionSum();
+    const beforeCong=congestionPx();
+    for(const i of members){
+      const n=NODES[i];
+      n.x=clamp(n.x+dx, CORE.x0+n.w/2, CORE.x1-n.w/2);
+      n.y=clamp(n.y+dy, CORE.y0+n.h/2, CORE.y1-n.h/2);
+    }
+    if(clusterOuterOverlap(members)>beforeOv){        // 破壞合法性 → 否決
+      members.forEach((i,k)=>{ NODES[i].x=saved[k][0]; NODES[i].y=saved[k][1]; });
+      return Infinity;
+    }
+    const afterCost=clusterLocalSum(members);
+    const afterPin=pinCongestionSum();
+    const afterCong=congestionPx();
+    const dC=(afterCost-beforeCost)+COST_PIN*(afterPin-beforePin)+densWeight()*(afterCong-beforeCong);
+    if(dC<=0 || RNG()<Math.exp(-dC/Math.max(temperature,1e-6))){
+      CACHE=null;
+      return dC;
+    }
+    members.forEach((i,k)=>{ NODES[i].x=saved[k][0]; NODES[i].y=saved[k][1]; });
+    return dC;
+  }
+
+  /** Macro-move C：群組收斂 (Cluster Co-compaction)
+   *  把群組朝自己的幾何中心收縮 λ 倍 → 群組內部的短連線維持短、
+   *  跨群組的長連線被拉短 —— 這正是「把複合邏輯重新打包成一個模組」的物理意義。
+   *  收縮到一定程度就會被「重疊懲罰」與「pin 擁擠懲罰」擋下來，形成平衡。 */
+  function macroCompact(members,lam){
+    const saved=members.map(i=>[NODES[i].x,NODES[i].y]);
+    const beforeOv=clusterOuterOverlap(members);
+    const beforeCost=clusterLocalSum(members);
+    const beforePin=pinCongestionSum();
+    const beforeCong=congestionPx();
+    let gx=0,gy=0;
+    for(const mi of members){ gx+=NODES[mi].x; gy+=NODES[mi].y; }
+    gx/=members.length; gy/=members.length;
+    for(const i of members){
+      const n=NODES[i];
+      n.x=clamp(gx+(n.x-gx)*lam, CORE.x0+n.w/2, CORE.x1-n.w/2);
+      n.y=clamp(gy+(n.y-gy)*lam, CORE.y0+n.h/2, CORE.y1-n.h/2);
+    }
+    if(clusterOuterOverlap(members)>beforeOv){
+      members.forEach((i,k)=>{ NODES[i].x=saved[k][0]; NODES[i].y=saved[k][1]; });
+      return Infinity;
+    }
+    const afterCost=clusterLocalSum(members);
+    const afterPin=pinCongestionSum();
+    const afterCong=congestionPx();
+    const dC=(afterCost-beforeCost)+COST_PIN*(afterPin-beforePin)+densWeight()*(afterCong-beforeCong);
+    if(dC<=0 || RNG()<Math.exp(-dC/Math.max(temperature,1e-6))){
+      CACHE=null;
+      return dC;
+    }
+    members.forEach((i,k)=>{ NODES[i].x=saved[k][0]; NODES[i].y=saved[k][1]; });
+    return dC;
+  }
+
+  /** Macro-move A：整包群組朝「它對外連接的 pin 質心」平移一小步。
+   *  ★ 為什麼只看「對外」的 net？群組內部的 net 質心 ≈ 群組自己，
+   *    往那裡移動等於原地踏步；真正拉動一個功能模組的，是它與其它模組之間的跨群組連線。 */
+  function macroMoveTranslate(){
+    if(!CLUSTERS.length) return 0;
+    const c=CLUSTERS[randInt(CLUSTERS.length)];
+    const members=c.members;
+    const inC=new Set(members);
+    let cx=0,cy=0,cnt=0;
+    const seen=new Set();
+    for(const mi of members){
+      for(const nid of NODES[mi].nets){
+        if(seen.has(nid)) continue; seen.add(nid);
+        const net=NETS[nid];
+        // 只考慮「跨群組」的 net：至少有一個 pin 在群組外
+        let out=0,sx=0,sy=0,sc=0;
+        for(const p of net.pins){
+          if(p.t==='n'&&inC.has(p.i)) continue;
+          out++;
+          let px,py;
+          if(p.t==='n'){ px=NODES[p.i].x; py=NODES[p.i].y; } else { px=PADS[p.i].x; py=PADS[p.i].y; }
+          sx+=px; sy+=py; sc++;
+        }
+        if(!out||!sc) continue;
+        cx+=sx/sc; cy+=sy/sc; cnt++;
+      }
+    }
+    let dx,dy;
+    if(!cnt){
+      // 沒有跨群組連線 → 隨機方向小位移（讓它也有機會離開目前的擁塞點）
+      const a=RNG()*Math.PI*2, r=2+RNG()*4;
+      dx=Math.cos(a)*r; dy=Math.sin(a)*r;
+    }else{
+      cx/=cnt; cy/=cnt;
+      let gx=0,gy=0;
+      for(const mi of members){ gx+=NODES[mi].x; gy+=NODES[mi].y; }
+      gx/=members.length; gy/=members.length;
+      dx=cx-gx; dy=cy-gy;
+      const d=len2(dx,dy);
+      if(d<1e-6){ dx=(RNG()-0.5)*2; dy=(RNG()-0.5)*2; }
+      else { dx/=d; dy/=d; }
+      // 步長隨溫度收斂：高溫大步長（快速換大局），低溫小步長（細部微調）
+      const step=Math.min(d, 5.0*(0.25+0.75*temperature/T_START)) + (RNG()-0.5)*1.5;
+      dx*=step; dy*=step;
+    }
+    return macroTranslate(members, dx, dy);
+  }
+
+  /** Macro-move B：兩個群組互換位置（成對交換 slot） */
+  function macroMoveSwapClusters(){
+    if(CLUSTERS.length<2) return 0;
+    const i=randInt(CLUSTERS.length);
+    let j=randInt(CLUSTERS.length-1); if(j>=i) j++;
+    const A=CLUSTERS[i].members, B=CLUSTERS[j].members;
+    const n=Math.min(A.length,B.length);
+    const all=A.concat(B);
+    const saved=all.map(k=>[NODES[k].x,NODES[k].y]);
+    const beforeOv=clusterOuterOverlap(all);
+    const beforeCost=clusterLocalSum(all);
+    const beforePin=pinCongestionSum();
+    const beforeCong=congestionPx();
+    for(let k=0;k<n;k++){
+      const a=NODES[A[k]], b=NODES[B[k]];
+      const tx=a.x,ty=a.y; a.x=b.x; a.y=b.y; b.x=tx; b.y=ty;
+    }
+    if(clusterOuterOverlap(all)>beforeOv){          // 破壞合法性 → 否決
+      all.forEach((k,idx)=>{ NODES[k].x=saved[idx][0]; NODES[k].y=saved[idx][1]; });
+      return Infinity;
+    }
+    const afterCost=clusterLocalSum(all);
+    const afterPin=pinCongestionSum();
+    const afterCong=congestionPx();
+    const dC=(afterCost-beforeCost)+COST_PIN*(afterPin-beforePin)+densWeight()*(afterCong-beforeCong);
+    if(dC<=0 || RNG()<Math.exp(-dC/Math.max(temperature,1e-6))){
+      CACHE=null;
+      return dC;
+    }
+    all.forEach((k,idx)=>{ NODES[k].x=saved[idx][0]; NODES[k].y=saved[idx][1]; });
+    return dC;
+  }
+
+  /** 群組內微調：挑同一群組的兩個 cell 交換（保護局部最佳解） */
+  function microMoveLocal(){
+    const pool=CLUSTERS.filter(c=>c.members.length>=2);
+    if(!pool.length) return 0;
+    const c=pool[randInt(pool.length)];
+    const a=c.members[randInt(c.members.length)];
+    const b=c.members[randInt(c.members.length)];
+    if(a===b) return 0;
+    return microSwapB2(a,b);
+  }
+
+  /** 破格突變：跨群組挑兩個 cell 交換（讓單一 cell 脫離原群組） */
+  function microMoveCross(){
+    if(CLUSTERS.length<2) return 0;
+    const i=randInt(CLUSTERS.length);
+    let j=randInt(CLUSTERS.length-1); if(j>=i) j++;
+    const a=CLUSTERS[i].members[randInt(CLUSTERS[i].members.length)];
+    const b=CLUSTERS[j].members[randInt(CLUSTERS[j].members.length)];
+    return microSwapB2(a,b);
+  }
+
+  /** Macro-move C 的包裝：隨機挑一群，收縮 3~12% */
+  function macroMoveCompact(){
+    if(!CLUSTERS.length) return 0;
+    const c=CLUSTERS[randInt(CLUSTERS.length)];
+    if(c.members.length<2) return 0;
+    return macroCompact(c.members, 0.88+RNG()*0.09);
+  }
+
+  function stepSAClustered(){
+    const hot = temperature > T_START*HOT_RATIO;
+    const r=RNG();
+    if(hot){
+      // 高溫大局期：以「整包群組」為單位，快速奠定大局
+      const a=SA_CFG.transP, b=a+SA_CFG.swapP, c=b+SA_CFG.compactP;
+      if(r<a)                      macroMoveTranslate();
+      else if(r<b)                 macroMoveSwapClusters();
+      else if(r<c)                 macroMoveCompact();
+      else if(r<1-MUTATE_P)        microMoveLocal();
+      else                         microMoveCross();     // 1% 破格突變開口
+    }else{
+      // 低溫微調期：解開群組束縛，在群組內部微調；仍保留少量大局能力
+      if(r<MACRO_P_COLD)           (RNG()<0.5?macroMoveTranslate():macroMoveSwapClusters());
+      else if(r<1-MUTATE_P)        microMoveLocal();
+      else                         microMoveCross();     // 1% 破格突變開口
+    }
+    // 幾何冷卻（與 B-1 完全相同的溫度曲線 → 兩者可直接比較）
+    temperature=Math.max(T_END, T_START*Math.pow(T_END/T_START, Math.min(1,iter/TEMP_ITERS)));
+    CACHE=null;
   }
 
   /* ------------------------------------------------------------------ *
@@ -1583,6 +2131,34 @@ window.__icons=function(){
       ctx.stroke();
     }
 
+    // ---- 邏輯功能群組 (Soft Clusters) ----
+    //  虛線外框 = 依連通度打包出的邏輯群組（相當於未拆散前的 XOR / Adder 等複合模組）
+    if(showClusters && CLUSTERS.length){
+      for(const c of CLUSTERS){
+        let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+        for(const i of c.members){
+          const n=NODES[i];
+          if(n.x-n.w/2<x0) x0=n.x-n.w/2;
+          if(n.y-n.h/2<y0) y0=n.y-n.h/2;
+          if(n.x+n.w/2>x1) x1=n.x+n.w/2;
+          if(n.y+n.h/2>y1) y1=n.y+n.h/2;
+        }
+        const pad=7, w=(x1-x0)+pad*2, h=(y1-y0)+pad*2;
+        ctx.save();
+        ctx.globalAlpha=0.09; ctx.fillStyle=c.color;
+        roundRect(x0-pad,y0-pad,w,h,7); ctx.fill();
+        ctx.globalAlpha=0.72;
+        ctx.setLineDash([6,4]); ctx.strokeStyle=c.color; ctx.lineWidth=1.4;
+        roundRect(x0-pad,y0-pad,w,h,7); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha=0.92; ctx.fillStyle=c.color;
+        ctx.font='9px ui-monospace,Menlo,Consolas,monospace';
+        ctx.textAlign='left'; ctx.textBaseline='bottom';
+        ctx.fillText('C'+c.id+' · '+c.members.length+' cells', x0-pad, y0-pad-2);
+        ctx.restore();
+      }
+    }
+
     // ---- 合法化後的標準列輔助線 ----
     if(legalized){
       ctx.strokeStyle='rgba(34,211,238,.18)'; ctx.lineWidth=1;
@@ -1717,20 +2293,44 @@ window.__icons=function(){
    * 12. UI 綁定
    * ------------------------------------------------------------------ */
   const MODE_LABEL={A:'MODE A · GREEDY LOCAL OPT.',B:'MODE B · SIMULATED ANNEALING',C:'MODE C · ANALYTICAL + CONGESTION MARGIN'};
+  const SUB_LABEL={B1:'B-1 · FLAT NAND SA（純散裝退火）',B2:'B-2 · SOFT-CLUSTERED SA（群組化 + 1% 突變開口）'};
   const MODE_NOTE={
     A:'<b class="text-cyan-300">模式 A（實測：HPWL ≈ 3,974 / Overlap 100% / Routability 0.0%）：</b>每個 cell 只朝「所屬 net 的 pin 質心」移動，完全沒有排斥力。HPWL 掉得最漂亮，但所有 cell 被拉到中心擠成一團 → 熱力圖中心深紅、通道容量趨近 0、Routability 直接歸零。<b class="text-rose-300">這就是「華容道」：線最短，卻整體無解。</b>',
-    B:'<b class="text-violet-300">模式 B（實測：HPWL ≈ 11,000 / Overlap ≈ 1% / Routability ≈ 47%）：</b>每次迭代隨機交換兩個 cell 的座標：ΔC ≤ 0 直接接受，ΔC &gt; 0 以 exp(−ΔC/T) 的 Metropolis 機率接受。T 由 300 幾何冷卻到 0.5，可以看到「早期大跳躍、晚期微調」的離散收斂。線長比解析法更短，但<b class="text-rose-300">通道分布是亂的</b>，這正是早期 EDA 的瓶頸。',
+    B:'<b class="text-violet-300">模式 B：</b>模擬退火。請在下方選擇子模式 <b>B-1 純散裝</b> 或 <b>B-2 群組化 + 1% 突變開口</b>，兩者使用<b>完全相同的目標函式與溫度曲線</b>，唯一差異是「移動的粒度」。',
     C:'<b class="text-amber-300">模式 C（實測：γ=0 → 54%／γ=0.8 → 64%／γ=1.5 → 68%／再合法化 → 85%）：</b>三力平衡 —— 彈簧拉力(α)縮短線長、Poisson 靜電斥力(β)消除重疊、擁塞場推力(γ)主動預留走線走廊。連續座標 + 動量積分 → 平滑流暢的物理擴散，最後再以增量合法化保證「物理上不重疊」。'
   };
+  const SUB_NOTE={
+    B1:'<b class="text-violet-300">B-1 純散裝退火（Flat NAND SA · 老師軟體現況）：</b>每一迭代<b>均勻隨機</b>挑兩個 cell 交換座標 —— 完全不論它們是否邏輯相連。高溫期（T=300）幾乎什麼交換都接受，於是「原本綁在一起的邏輯群」被大量拆散、甩到晶片兩端；被拆散的短連線全部升級成跨越全晶片的長線，RUDY 需求暴增、通道塞死。而且目標函式裡<b>沒有 γ 擁塞項</b> → 演算法只會往「線最短」的方向走。缺陷正是「沒有結構先驗」：搜尋空間是 35! 的排列，優解只佔極小一角。',
+    B2:'<b class="text-cyan-300">B-2 群組化 + 1% 突變開口（Soft-Clustered SA）：</b>退火前先依<b>連通度</b>把 35 個 cell 打包成軟群組（Heavy-Edge Matching + 平均連結凝聚）。高溫大局期以<b>整包群組</b>為單位平移 / 互換 / 收斂（Macro-move）→ 一次移動就跨越大量排列，搜尋空間被壓縮一個數量級；低溫期解開束縛在群組內微調；並保留 <b>1% 破格突變</b>讓單一 cell 脫離原群組跨群組重組 —— 若總 Cost（含 γ 擁塞懲罰）下降就接受，收編為新的局部結構解。<b class="text-amber-300">關鍵差異：B-2 把 γ 帶進了接受準則</b>，所以「擠成一團換短線」不再划算。'
+  };
+
+  function currentNote(){
+    return (mode==='B')?SUB_NOTE[saSub]:MODE_NOTE[mode];
+  }
+  function applyNote(){
+    $('#modeNote').innerHTML=currentNote();
+    $('#explainBox').innerHTML=currentNote();
+    const sc=$('#saSubNote'); if(sc) sc.innerHTML=currentNote();
+  }
 
   function setMode(m){
     mode=m;
     document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
-    $('#hudMode').textContent=MODE_LABEL[m];
-    $('#modeNote').innerHTML=MODE_NOTE[m];
-    $('#explainBox').innerHTML=MODE_NOTE[m];
+    $('#hudMode').textContent = (m==='B')?('MODE '+saSub+' · '+SUB_LABEL[saSub]):MODE_LABEL[m];
     $('#tempWrap').style.opacity=(m==='B')?'1':'0.25';
+    const card=$('#saSubCard'); if(card) card.style.display=(m==='B')?'':'none';
     if(m==='B'){ temperature=T_START; }
+    applyNote();
+    updateHUD();
+  }
+
+  function setSubMode(s){
+    saSub=s;
+    document.querySelectorAll('input[name=saSub]').forEach(r=>{ r.checked=(r.value===s); });
+    document.querySelectorAll('.sa-sub').forEach(l=>l.classList.toggle('on',l.dataset.sub===s));
+    if(mode==='B') $('#hudMode').textContent='MODE '+saSub+' · '+SUB_LABEL[saSub];
+    temperature=T_START;              // 換策略 → 重新退火（網表與位置保持不變）
+    applyNote();
     updateHUD();
   }
 
@@ -1759,7 +2359,7 @@ window.__icons=function(){
   /* 單步 / 啟停 */
   function doStep(){
     if(mode==='A')      stepGreedy();
-    else if(mode==='B') stepSA();
+    else if(mode==='B'){ if(saSub==='B2') stepSAClustered(); else stepSA(); }
     else                stepAnalytical();
     iter++;
   }
@@ -1779,6 +2379,24 @@ window.__icons=function(){
     running=false; syncRunButton();
     buildNetlist(Math.floor(Math.random()*1e9));
     computeMetrics(); updateHUD(); drawChart();
+  });
+  // 固定種子重跑 → 取得完全相同的網表與初始位置（B-1 / B-2 公平對比的關鍵）
+  $('#btnSeed').addEventListener('click',()=>{
+    running=false; syncRunButton();
+    buildNetlist(20261029);
+    computeMetrics(); updateHUD(); drawChart();
+  });
+  // 記錄本次結果 → 寫入 B-1 / B-2 對比表
+  $('#btnRecord').addEventListener('click',()=>{ recordResult(); });
+  // 快轉：一次跑完 3000 次退火迭代（離線實測的同一組條件）
+  $('#btnFast').addEventListener('click',()=>{
+    running=false; syncRunButton();
+    const target=TEMP_ITERS;
+    const t0=performance.now();
+    let guard=0;
+    while(iter<target && guard++<200000){ doStep(); }
+    computeMetrics(); updateHUD(); drawChart();
+    console.log('[EDA] 快轉完成：iter='+iter+'  用時 '+(performance.now()-t0).toFixed(0)+' ms');
   });
 
   document.addEventListener('keydown',e=>{
@@ -1802,6 +2420,60 @@ window.__icons=function(){
   $('#cHeat').addEventListener('change',e=>showHeat=e.target.checked);
   $('#cHalo').addEventListener('change',e=>showHalo=e.target.checked);
   $('#cGrid').addEventListener('change',e=>showGrid=e.target.checked);
+  $('#cClusters').addEventListener('change',e=>showClusters=e.target.checked);
+  $('#cGamma').addEventListener('change',e=>{ useGamma=e.target.checked; });
+  // 甜蜜點 γ（10 個網表實測：HPWL −2.6% 且 Routability +9.7pt）
+  $('#btnGammaSweet').addEventListener('click',()=>{
+    const sl=$('#sGamma'); sl.value='0.6'; sl.dispatchEvent(new Event('input'));
+  });
+
+  // Mode B 子模式（單選）
+  document.querySelectorAll('input[name=saSub]').forEach(r=>{
+    r.addEventListener('change',()=>{ if(r.checked) setSubMode(r.value); });
+  });
+  document.querySelectorAll('.sa-sub').forEach(l=>{
+    l.addEventListener('click',()=>setSubMode(l.dataset.sub));
+  });
+
+  /* ------------------------------------------------------------------ *
+   * 12.1 B-1 / B-2 實測對比表
+   * ------------------------------------------------------------------ */
+  function recordResult(){
+    const m=computeMetrics();
+    SA_RESULT[saSub]={hpwl:m.hpwl,overlap:m.overlap,route:m.route,cong:m.cong,ovf:m.ovf,iter:iter,seed:currentSeed,gamma:gamma};
+    renderCmp();
+  }
+  const pct=(a,b)=>(b>0?((a-b)/b*100):0);
+  function renderCmp(){
+    const body=$('#cmpBody'); if(!body) return;
+    const a=SA_RESULT.B1, b=SA_RESULT.B2;
+    if(!a&&!b){
+      body.innerHTML='<tr><td colspan="4" class="text-slate-600 py-2">尚未記錄。請用「固定網表重跑」→ 跑 B-1 → 記錄 → 再跑 B-2 → 記錄。</td></tr>';
+      return;
+    }
+    const cell=(v)=>v==null?'<td class="text-slate-600">—</td>':'<td>'+v+'</td>';
+    const num=(x,d=0)=>x==null?'—':x.toFixed(d);
+    const dHPWL=(a&&b)?pct(b.hpwl,a.hpwl):null;
+    const dRoute=(a&&b)?(b.route-a.route):null;
+    const dOv=(a&&b)?pct(b.overlap,a.overlap):null;
+    const clsHPWL=(dHPWL==null)?'':(dHPWL<0?'text-lime-300':'text-rose-300');
+    const clsRoute=(dRoute==null)?'':(dRoute>0?'text-lime-300':'text-rose-300');
+    const clsOv=(dOv==null)?'':(dOv<0?'text-lime-300':'text-rose-300');
+    const sgn=(v,d=0)=>v==null?'—':(v>0?'+':'')+v.toFixed(d);
+    body.innerHTML=
+      '<tr><td class="text-slate-300">HPWL ↓</td>'+cell(num(a&&a.hpwl,0))+cell(num(b&&b.hpwl,0))+
+        '<td class="'+clsHPWL+'">'+(dHPWL==null?'—':sgn(dHPWL,1)+'%')+'</td></tr>'+
+      '<tr><td class="text-slate-300">Overlap ↓</td>'+cell(num(a&&a.overlap,2)+'%')+cell(num(b&&b.overlap,2)+'%')+
+        '<td class="'+clsOv+'">'+(dOv==null?'—':sgn(dOv,1)+'%')+'</td></tr>'+
+      '<tr><td class="text-slate-300">Routability ↑</td>'+cell(num(a&&a.route,1)+'%')+cell(num(b&&b.route,1)+'%')+
+        '<td class="'+clsRoute+'">'+(dRoute==null?'—':sgn(dRoute,1)+' pt')+'</td></tr>'+
+      '<tr><td class="text-slate-300">Max Cong.</td>'+cell(num(a&&a.cong,2))+cell(num(b&&b.cong,2))+
+        '<td class="text-slate-500">'+(a&&b?sgn(b.cong-a.cong,2):'—')+'</td></tr>'+
+      '<tr><td class="text-slate-300">ITER</td>'+cell(num(a&&a.iter,0))+cell(num(b&&b.iter,0))+
+        '<td class="text-slate-500">'+(a&&b?sgn(b.iter-a.iter,0):'—')+'</td></tr>';
+    const f=$('#cmpFoot');
+    if(f) f.textContent='B-1: seed '+(a?a.seed:'-')+' / γ '+(a?a.gamma.toFixed(2):'-')+'　·　B-2: seed '+(b?b.seed:'-')+' / γ '+(b?b.gamma.toFixed(2):'-')+'　·　數值為記錄當下的實測值。';
+  }
 
   // 模式按鈕
   document.querySelectorAll('.mode-btn').forEach(b=>{
@@ -1847,9 +2519,13 @@ window.__icons=function(){
     frame++;
     if(running){
       if(mode==='A')      stepGreedy();
-      else if(mode==='B'){ for(let k=0;k<10;k++) stepSA(); iter++; }  // 每幀多嘗試幾次，SA 才有速度
+      else if(mode==='B'){
+        const k=(saSub==='B2')?4:10;      // B-2 的 macro-move 代價較高 → 每幀步數減半
+        for(let s=0;s<k;s++){ if(saSub==='B2') stepSAClustered(); else stepSA(); }
+        iter+=k;                          // ★ iter 計的是「退火迭代數(=SA 步數)」而非幀數
+      }                                   //   → 溫度曲線與離線實測完全一致
       else                stepAnalytical(), iter++;
-      if(mode==='B') temperature=Math.max(T_END,T_START*Math.pow(T_END/T_START,Math.min(1,iter/TEMP_ITERS)));
+      if(mode==='B') temperature=Math.max(T_END, T_START*Math.pow(T_END/T_START,Math.min(1,iter/TEMP_ITERS)));
     }
     if(frame%4===0){
       computeMetrics();
@@ -1870,6 +2546,8 @@ window.__icons=function(){
   computeMetrics();
   updateHUD();
   setMode('B');
+  setSubMode('B1');
+  renderCmp();
   window.__icons();
   requestAnimationFrame(loop);
 
@@ -1885,9 +2563,30 @@ window.__icons=function(){
     get nodes(){return NODES}, get nets(){return NETS}, get pads(){return PADS},
     get metrics(){return M}, get mode(){return mode}, get iter(){return iter},
     get temperature(){return temperature},
-    setMode, step:doStep, computeMetrics, legalize,
+    get sub(){return saSub}, get clusters(){return CLUSTERS}, get seed(){return currentSeed},
+    setMode, setSubMode, step:doStep, computeMetrics, legalize,
+    buildClusters:(k)=>buildClusters(k),
+    recordResult, get results(){return SA_RESULT},
+    /* 診斷用：拆解目前佈局的代價分量（供課堂講解「γ 到底在管什麼」） */
+    costParts:()=>{
+      let wl=0,ovl=0,cong=0;
+      for(const n of NODES) wl+=localCost(n,n.x,n.y);
+      let area=0;
+      for(let i=0;i<NODES.length;i++) for(let j=i+1;j<NODES.length;j++){
+        const a=NODES[i],b=NODES[j];
+        const ow=Math.min(a.x+a.w/2,b.x+b.w/2)-Math.max(a.x-a.w/2,b.x-b.w/2);
+        if(ow<=0) continue;
+        const oh=Math.min(a.y+a.h/2,b.y+b.h/2)-Math.max(a.y-a.h/2,b.y-b.h/2);
+        if(oh>0) area+=ow*oh;
+      }
+      ovl=COST_OVL*area;
+      cong=congestionPx();
+      return {wl:Math.round(wl), ovl:Math.round(ovl), congPx:Math.round(cong), congWeighted:Math.round(gamma*cong)};
+    },
     buildNetlist:(s)=>buildNetlist(s??Math.floor(Math.random()*1e9)),
     setWeights:(a,b,g)=>{alpha=a;beta=b;gamma=g;},
+    setGamma:(on)=>{useGamma=on;},
+    setCfg:(o)=>Object.assign(SA_CFG,o), get cfg(){return SA_CFG},
     run:(n)=>{ for(let i=0;i<n;i++){ doStep(); } computeMetrics(); updateHUD(); return M; }
   };
 })();
