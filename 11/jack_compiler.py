@@ -55,6 +55,14 @@ ships with the Nand2Tetris software suite)
   table.  If ``p`` is a variable the call is a method call on that object
   (``push p`` + one extra argument); otherwise ``p`` is a class name and the
   call is a static one.
+* **The order of the arguments.**  The receiver of a method call is pushed
+  *before* the arguments are evaluated: the VM pops the arguments from the
+  stack in the order in which they were pushed, so the receiver has to be the
+  first value on the stack.
+* **Array assignments.**  The address of the array element stays on the
+  stack while the value is computed; it is moved into THAT (``pop pointer
+  1``) only afterwards.  Computing the address first and storing it in THAT
+  would break as soon as the value accesses an array as well.
 """
 
 from __future__ import annotations
@@ -914,52 +922,54 @@ class CompilationEngine:
         ``prefix`` is ``None`` for an unqualified call (``f(...)``) and the
         name of the object or of the class for a qualified one
         (``p.f(...)``).
+
+        The receiver of a method call is pushed **before** the arguments are
+        evaluated: the VM pops the arguments from the stack in the order in
+        which they were pushed, so the receiver has to be the first one.
         """
+        receiver_segment: Optional[Tuple[str, int]] = None
+        receiver_type: Optional[str] = None
+
+        if prefix is None:
+            # f(...): a subroutine of the current class
+            kind = self.class_subroutines.get(name)
+            if kind is None:
+                # The subroutine is not declared in this class: assume it is
+                # a method, which is the only case in which the receiver can
+                # be passed on.
+                is_method = self.subroutine_kind in ("method", "constructor")
+            else:
+                is_method = kind == "method"
+            if is_method:
+                # the receiver is the current object
+                receiver_segment = ("pointer", 0)
+                receiver_type = self.class_name
+        else:
+            # p.f(...): a method of an object or a static routine of a class
+            symbol = self.symbols.lookup(prefix)
+            if symbol is not None and not (
+                symbol.kind == "field" and self.subroutine_kind == "function"
+            ):
+                # a function has no "this" and cannot reach a field
+                receiver_segment = (VM_SEGMENTS[symbol.kind], symbol.index)
+                receiver_type = symbol.type
+
+        if receiver_segment is not None:
+            self.writer.write_push(receiver_segment[0], receiver_segment[1])
+
         self._expect_symbol("(")
         n_args = self._compile_expression_list()
         self._expect_symbol(")")
 
-        if prefix is None:
-            self._compile_unqualified_call(name, n_args)
-        else:
-            self._compile_qualified_call(prefix, name, n_args)
-
-    def _compile_unqualified_call(self, name: str, n_args: int) -> None:
-        """Compile ``f(...)``: a subroutine of the current class."""
-        kind = self.class_subroutines.get(name)
-
-        if kind is None:
-            # The subroutine is not declared in this class: assume it is a
-            # method, which is the only case in which the receiver can be
-            # passed on.
-            is_method = self.subroutine_kind in ("method", "constructor")
-        else:
-            is_method = kind == "method"
-
-        if is_method:
-            # the receiver is the current object
-            self.writer.write_push("pointer", 0)
-            self.writer.write_call(f"{self.class_name}.{name}", n_args + 1)
-        else:
-            self.writer.write_call(f"{self.class_name}.{name}", n_args)
-
-    def _compile_qualified_call(self, prefix: str, name: str, n_args: int) -> None:
-        """Compile ``p.f(...)``.
-
-        If ``p`` is a variable the call is a method call on that object,
-        otherwise ``p`` is the name of a class and the call is a static one.
-        """
-        symbol = self.symbols.lookup(prefix)
-        if symbol is not None and symbol.kind == "field" and self.subroutine_kind == "function":
-            symbol = None  # a function has no "this" and cannot reach a field
-
-        if symbol is None:
+        if receiver_type is not None:
+            # a method: the receiver is the first argument
+            self.writer.write_call(f"{receiver_type}.{name}", n_args + 1)
+        elif prefix is not None:
             # a static function or a constructor of another class
             self.writer.write_call(f"{prefix}.{name}", n_args)
         else:
-            # a method of the object the variable refers to
-            self._push_symbol(symbol)
-            self.writer.write_call(f"{symbol.type}.{name}", n_args + 1)
+            # a function of the current class
+            self.writer.write_call(f"{self.class_name}.{name}", n_args)
 
     # ------------------------------------------------------------------
     # variables
